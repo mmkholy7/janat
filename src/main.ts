@@ -1,5 +1,5 @@
-import { createIcons, Leaf, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, CalendarDays, Bell, BookOpen, Check, X, Download, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2 } from 'lucide';
-import { addDays, calendarInvite, dateKey, fastDay, hijriDate, upcomingDays, type FastDay, type FastStatus } from './calendar';
+import { createIcons, Leaf, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2 } from 'lucide';
+import { addDays, calendarEventLinks, calendarInvite, calendarSubscriptionLinks, dateKey, fastDay, hijriDate, upcomingDays, type FastDay, type FastStatus } from './calendar';
 import { messages, locales, verses, hadith, type Language } from './i18n';
 import { resources, type ResourceCategory } from './resources';
 import './style.css';
@@ -9,7 +9,7 @@ type View = 'home' | 'calendar' | 'logbook' | 'quran' | 'resources';
 type Preferences = { language: Language; adjustment: number; weekly: boolean; white: boolean; quranGoal: number };
 type QuranSession = { id: string; date: string; kind: 'recitation' | 'revision'; minutes: number; pages: number };
 const app = document.querySelector<HTMLDivElement>('#app')!;
-const icons = { Leaf, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, CalendarDays, Bell, BookOpen, Check, X, Download, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2 };
+const icons = { Leaf, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2 };
 let storageAvailable = true;
 function load(key: string): unknown {
   try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { storageAvailable = false; return null; }
@@ -34,7 +34,8 @@ let resourceCategory: 'all' | ResourceCategory = 'all';
 let month = new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12);
 let scene = 0;
 let selected: string | null = null;
-let activeModal: 'reminders' | 'settings' | 'record' | 'sources' | null = null;
+let activeModal: 'reminders' | 'settings' | 'record' | 'sources' | 'calendar' | 'quran-calendar' | null = null;
+const availableFeeds = new Set<string>();
 let focusBeforeModal: HTMLElement | null = null;
 const text = () => messages[preferences.language];
 const today = () => new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 12);
@@ -151,18 +152,63 @@ function exportCalendar(singleDate?: string) {
   if (!days.length) { toast(text().noSelection); return; }
   downloadFile(calendarInvite(days, text().inviteTitle, text().inviteBody), singleDate ? `janat-${singleDate}.ics` : 'janat-fasting-90-days.ics', 'text/calendar;charset=utf-8'); toast(text().downloaded);
 }
+function subscriptionUrl(activity: 'fast' | 'quran') {
+  const url = new URL('/api/calendar', location.origin);
+  url.search = new URLSearchParams({ activity, lang: preferences.language, adjustment: String(preferences.adjustment), weekly: String(preferences.weekly), white: String(preferences.white) }).toString();
+  return url.href;
+}
+function providerChoices(links: Record<string, string>, subscription = false) {
+  const labels: Record<string, string> = { google: 'Google Calendar', outlook: 'Outlook.com', office365: 'Microsoft 365', apple: 'Apple Calendar' };
+  return `<div class="provider-choices" aria-label="${text().calendarProvider}">${Object.entries(links).map(([provider, url]) => `<a class="provider-link" data-provider="${provider}" ${subscription ? 'data-subscription aria-disabled="true"' : ''} ${subscription ? '' : `href="${url}"`} target="_blank" rel="noopener noreferrer">${icon('calendar-days')}<span>${labels[provider]}</span>${icon('arrow-up-right')}</a>`).join('')}</div>`;
+}
+function subscriptionChoices(activity: 'fast' | 'quran') {
+  return `<section class="subscription-options" data-activity="${activity}"><h3>${text().subscribeCalendar}</h3>${providerChoices(calendarSubscriptionLinks(subscriptionUrl(activity), 'Janat'), true)}<p class="feed-status fine-print" role="status">${text().feedChecking}</p><div class="feed-url-row"><input class="subscription-url" aria-label="${text().subscriptionUrl}" dir="ltr" readonly value="${subscriptionUrl(activity)}"><button type="button" class="icon-button" data-action="copy-feed" aria-label="${text().copyCalendarUrl}" title="${text().copyCalendarUrl}" disabled>${icon('copy')}</button></div><p class="fine-print">${text().feedNote}</p></section>`;
+}
+async function updateSubscriptionChoices(dialog: HTMLDialogElement) {
+  const options = dialog.querySelector<HTMLElement>('.subscription-options'); if (!options) return;
+  const activity = options.dataset.activity as 'fast' | 'quran';
+  const url = subscriptionUrl(activity);
+  const input = options.querySelector<HTMLInputElement>('.subscription-url')!; input.value = url;
+  const links = calendarSubscriptionLinks(url, 'Janat');
+  const status = options.querySelector<HTMLElement>('.feed-status')!;
+  const copy = options.querySelector<HTMLButtonElement>('[data-action="copy-feed"]')!;
+  const anchors = options.querySelectorAll<HTMLAnchorElement>('[data-subscription]');
+  anchors.forEach(anchor => { anchor.removeAttribute('href'); anchor.setAttribute('aria-disabled', 'true'); });
+  copy.disabled = true; status.textContent = text().feedChecking;
+  if (activity === 'fast' && !preferences.weekly && !preferences.white) { status.textContent = text().noSelection; return; }
+  try {
+    if (!availableFeeds.has(url)) {
+      const response = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(10000) });
+      if (!response.ok || !response.headers.get('Content-Type')?.startsWith('text/calendar')) throw new Error('Calendar unavailable');
+      availableFeeds.add(url);
+    }
+    if (!dialog.open || options !== dialog.querySelector('.subscription-options') || input.value !== url) return;
+    anchors.forEach(anchor => { anchor.href = links[anchor.dataset.provider as keyof typeof links]; anchor.setAttribute('aria-disabled', 'false'); });
+    copy.disabled = false; status.textContent = '';
+  } catch {
+    if (dialog.open && options === dialog.querySelector('.subscription-options') && input.value === url) status.textContent = text().feedUnavailable;
+  }
+}
 function closeModal() { (document.querySelector('#modal') as HTMLDialogElement).close(); activeModal = null; focusBeforeModal?.focus(); }
 function openModal(kind: NonNullable<typeof activeModal>, date?: string) {
   focusBeforeModal = document.activeElement as HTMLElement; activeModal = kind; if (date) selected = date;
   const dialog = document.querySelector<HTMLDialogElement>('#modal')!;
   let content = '';
-  if (kind === 'reminders') content = `<span class="modal-icon">${icon('bell')}</span><h2 id="modal-title">${text().reminderTitle}</h2><p>${text().reminderIntro}</p><form id="reminder-form"><label class="check-row">${icon('sun')}<span>${text().weekly}</span><input name="weekly" type="checkbox" ${preferences.weekly ? 'checked' : ''}></label><label class="check-row">${icon('moon')}<span>${text().white}<small>13 · 14 · 15</small></span><input name="white" type="checkbox" ${preferences.white ? 'checked' : ''}></label><button class="button primary full" type="submit">${icon('download')}${text().download}</button></form><p class="fine-print">${text().calendarNote}</p><div class="privacy-note">${icon('shield-check')}<p><strong>${text().privacyTitle}</strong>${text().privacy}</p></div><p class="fine-print">${text().emailNote}</p><button class="text-button" data-action="settings">${icon('settings-2')}${text().calendarSettings}</button>`;
+  if (kind === 'reminders') content = `<span class="modal-icon">${icon('bell')}</span><h2 id="modal-title">${text().reminderTitle}</h2><p>${text().reminderIntro}</p><form id="reminder-form"><label class="check-row">${icon('sun')}<span>${text().weekly}</span><input name="weekly" type="checkbox" ${preferences.weekly ? 'checked' : ''}></label><label class="check-row">${icon('moon')}<span>${text().white}<small>13 · 14 · 15</small></span><input name="white" type="checkbox" ${preferences.white ? 'checked' : ''}></label>${subscriptionChoices('fast')}<button class="button outline full" type="submit">${icon('download')}${text().download}</button></form><p class="fine-print">${text().calendarNote}</p><div class="privacy-note">${icon('shield-check')}<p><strong>${text().privacyTitle}</strong>${text().feedPrivacy}</p></div><p class="fine-print">${text().emailNote}</p><button class="text-button" data-action="settings">${icon('settings-2')}${text().calendarSettings}</button>`;
+  if (kind === 'calendar' && selected) content = `<span class="modal-icon">${icon('calendar-days')}</span><h2 id="modal-title">${text().calendarProvider}</h2><p>${format(parseDate(selected), { dateStyle: 'full' })} · ${hijriLabel(parseDate(selected))}</p>${providerChoices(calendarEventLinks(parseDate(selected), text().inviteTitle, text().inviteBody))}<p class="fine-print">${text().eventNote}</p><button class="button outline full" data-action="download-single" data-date="${selected}">${icon('download')}${text().download}</button>`;
+  if (kind === 'quran-calendar') content = `<span class="modal-icon">${icon('book-open')}</span><h2 id="modal-title">${text().quranCalendar}</h2>${subscriptionChoices('quran')}<p class="fine-print">${text().feedPrivacy}</p><button class="button outline full" data-action="download-quran">${icon('download')}${text().download}</button><p class="fine-print">${text().quranCalendarNote}</p>`;
   if (kind === 'settings') content = `<h2 id="modal-title">${text().calendarSettings}</h2><form id="settings-form"><label class="form-label" for="adjustment">${text().adjustment}</label><select id="adjustment" name="adjustment">${[-1, 0, 1].map(value => `<option value="${value}" ${preferences.adjustment === value ? 'selected' : ''}>${value === -1 ? text().minusDay : value === 0 ? text().sameDay : text().plusDay}</option>`).join('')}</select><p class="fine-print">${text().adjustHint}</p><button class="button primary full" type="submit">${icon('check')}${text().save}</button></form><button class="text-button danger delete-button" data-action="reset">${icon('trash-2')}${text().reset}</button>`;
   if (kind === 'record' && selected) content = `<span class="modal-icon">${icon('heart')}</span><h2 id="modal-title">${text().record}</h2><p>${format(parseDate(selected), { dateStyle: 'full' })}</p><p class="hijri-record">${hijriLabel(parseDate(selected))}</p><div class="record-options"><button class="button ${logbook[selected] === 'fasted' ? 'primary' : 'outline'}" data-status="fasted">${icon('check')}${text().fasted}</button><button class="button ${logbook[selected] === 'missed' ? 'selected-missed' : 'outline'}" data-status="missed">${icon('x')}${text().missed}</button></div>${logbook[selected] ? `<button class="text-button" data-status="clear">${text().undo}</button>` : ''}`;
   if (kind === 'sources') content = `<h2 id="modal-title">${text().sourceTitle}</h2><p class="source-copy">${text().sourceBody}</p><div class="source-links"><a href="https://sunnah.com/tirmidhi:747" target="_blank" rel="noopener noreferrer">Jami at-Tirmidhi 747 ${icon('arrow-up-right')}</a><a href="https://sunnah.com/tirmidhi:761" target="_blank" rel="noopener noreferrer">Jami at-Tirmidhi 761 ${icon('arrow-up-right')}</a></div><p class="fine-print">${text().adjustHint}</p>`;
   dialog.innerHTML = `<button class="icon-button modal-close" data-action="close" aria-label="${text().close}" title="${text().close}">${icon('x')}</button>${content}`;
   if (!dialog.open) dialog.showModal();
   bind(dialog); createIcons({ icons });
+  void updateSubscriptionChoices(dialog);
+  dialog.querySelectorAll<HTMLInputElement>('#reminder-form input[type="checkbox"]').forEach(input => input.addEventListener('change', () => {
+    const form = dialog.querySelector<HTMLFormElement>('#reminder-form')!; const data = new FormData(form);
+    preferences.weekly = data.has('weekly'); preferences.white = data.has('white'); persist('janat.preferences', preferences);
+    void updateSubscriptionChoices(dialog);
+  }));
   dialog.querySelector('#reminder-form')?.addEventListener('submit', event => { event.preventDefault(); const data = new FormData(event.target as HTMLFormElement); preferences.weekly = data.has('weekly'); preferences.white = data.has('white'); persist('janat.preferences', preferences); exportCalendar(); });
   dialog.querySelector('#settings-form')?.addEventListener('submit', event => { event.preventDefault(); preferences.adjustment = Number(new FormData(event.target as HTMLFormElement).get('adjustment')); persist('janat.preferences', preferences); closeModal(); render(); toast(text().saved); });
   dialog.querySelectorAll<HTMLButtonElement>('[data-status]').forEach(button => button.addEventListener('click', () => { if (!selected || selected > dateKey(today())) return; const status = button.dataset.status; if (status === 'clear') delete logbook[selected]; else logbook[selected] = status as FastStatus; persist('janat.logbook', logbook); closeModal(); render(); toast(text().recorded); }));
@@ -174,12 +220,18 @@ function bind(root: ParentNode = app) {
     if (action === 'reminders' || action === 'settings' || action === 'sources') openModal(action);
     if (action === 'record') openModal('record', button.dataset.date);
     if (action === 'close') closeModal();
-    if (action === 'invite') exportCalendar(button.dataset.date);
+    if (action === 'invite') openModal('calendar', button.dataset.date);
+    if (action === 'download-single') exportCalendar(button.dataset.date);
+    if (action === 'copy-feed') {
+      const input = button.closest('.subscription-options')?.querySelector<HTMLInputElement>('.subscription-url');
+      if (input) void navigator.clipboard.writeText(input.value).then(() => toast(text().calendarUrlCopied)).catch(() => { input.select(); toast(text().clipboardError); });
+    }
     if (action === 'scene') { scene = Number(button.dataset.scene); render(); }
     if (action === 'prev-month' || action === 'next-month') { month = new Date(month.getFullYear(), month.getMonth() + (action === 'next-month' ? 1 : -1), 1, 12); render(); }
     if (action === 'today') { month = new Date(today().getFullYear(), today().getMonth(), 1, 12); render(); }
     if (action === 'backup') downloadFile(JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), logbook, quranSessions, preferences }, null, 2), 'janat-logbook.json', 'application/json');
-    if (action === 'quran-invite') {
+    if (action === 'quran-invite') openModal('quran-calendar');
+    if (action === 'download-quran') {
       const days = Array.from({ length: 30 }, (_, offset) => { const date = addDays(today(), offset + 1); return { date, key: dateKey(date) }; });
       downloadFile(calendarInvite(days, text().quranInviteTitle, text().quranInviteBody, 'quran'), 'janat-quran-30-days.ics', 'text/calendar;charset=utf-8'); toast(text().downloaded);
     }
@@ -201,7 +253,15 @@ function bind(root: ParentNode = app) {
     preferences.quranGoal = goal; persist('janat.preferences', preferences); render(); toast(text().saved);
   });
   const dialog = root.querySelector<HTMLDialogElement>('#modal');
-  dialog?.addEventListener('click', event => { if (event.target === dialog) { const rect = dialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) closeModal(); } });
+  let pointerStartedOutside = false;
+  dialog?.addEventListener('pointerdown', event => {
+    const rect = dialog.getBoundingClientRect();
+    pointerStartedOutside = event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom);
+  });
+  dialog?.addEventListener('click', event => {
+    if (pointerStartedOutside && event.target === dialog) closeModal();
+    pointerStartedOutside = false;
+  });
   dialog?.addEventListener('cancel', () => { activeModal = null; });
 }
 render();

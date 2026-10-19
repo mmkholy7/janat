@@ -116,6 +116,7 @@ test('Quran sessions, goals, and reminders stay separate from fasting', async ({
   await expect(page.locator('.quran-progress strong')).toHaveText('20 / 30');
   const downloadPromise = page.waitForEvent('download');
   await page.locator('[data-action="quran-invite"]').click();
+  await page.locator('[data-action="download-quran"]').click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe('janat-quran-30-days.ics');
   const stream = await download.createReadStream();
@@ -124,6 +125,7 @@ test('Quran sessions, goals, and reminders stay separate from fasting', async ({
   expect(calendar.match(/BEGIN:VEVENT/g)).toHaveLength(30);
   expect(calendar).toContain('UID:quran-2026-10-20@janat.local');
   expect(calendar).not.toContain('UID:fast-');
+  await page.keyboard.press('Escape');
   await page.locator('#quran-session [name="minutes"]').fill('0');
   await page.locator('#quran-session button[type="submit"]').click();
   await expect(page.locator('.quran-row')).toHaveCount(1);
@@ -139,4 +141,49 @@ test('Quran sessions, goals, and reminders stay separate from fasting', async ({
   await expect(page.locator('.quran-row')).toHaveCount(0);
   await page.locator('nav [data-view="logbook"]').click();
   await expect(page.locator('.log-total.fasted strong')).toHaveText('0');
+});
+
+test('calendar providers open drafts and subscribe without file imports', async ({ page, request }, testInfo) => {
+  await page.locator('.hero-link[data-action="invite"]').click();
+  const google = page.locator('dialog [data-provider="google"]');
+  await expect(google).toHaveAttribute('href', /calendar.google.com/);
+  const event = new URL((await google.getAttribute('href'))!);
+  expect(event.searchParams.get('dates')).toBe('20261019/20261020');
+  await expect(page.locator('dialog [data-provider="office365"]')).toHaveAttribute('href', /outlook.office.com/);
+  await page.keyboard.press('Escape');
+  await page.locator('.header-reminder').click();
+  await expect(page.locator('.feed-status')).toBeEmpty({ timeout: 15000 });
+  await expect(page.locator('dialog [data-provider="google"]')).toHaveAttribute('aria-disabled', 'false');
+  await page.locator('#reminder-form [name="weekly"]').uncheck();
+  await expect(page.locator('dialog')).toBeVisible();
+  await expect(page.locator('.feed-status')).toBeEmpty({ timeout: 15000 });
+  await expect(page.locator('dialog [data-provider="google"]')).toHaveAttribute('href', /weekly%3Dfalse/);
+  const subscribe = new URL((await page.locator('dialog [data-provider="google"]').getAttribute('href'))!);
+  const feed = new URL(subscribe.searchParams.get('cid')!);
+  expect(feed.searchParams.get('white')).toBe('true');
+  expect(feed.searchParams.has('email')).toBe(false);
+  const response = await request.get(feed.href);
+  expect(response.status()).toBe(200);
+  expect(response.headers()['content-type']).toContain('text/calendar');
+  expect(await response.text()).toContain('BEGIN:VCALENDAR');
+  await expect(page.locator('dialog [data-provider="apple"]')).toHaveAttribute('href', /^webcal:/);
+  for (const language of ['ar', 'fr', 'es', 'en']) {
+    await page.keyboard.press('Escape');
+    await page.locator('#language').selectOption(language);
+    await page.locator('.header-reminder').click();
+    await expect(page.locator('.feed-status')).toBeEmpty({ timeout: 15000 });
+    await expect(page.locator('dialog [data-provider="google"]')).toHaveAttribute('aria-disabled', 'false');
+    expect(await page.locator('dialog').evaluate(element => element.scrollWidth > element.clientWidth)).toBe(false);
+  }
+  await page.screenshot({ path: testInfo.outputPath('calendar-providers.png'), fullPage: true });
+});
+
+test('missing calendar feeds keep downloads usable without broken subscription links', async ({ page }) => {
+  await page.route('**/api/calendar?**', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<html>Not deployed</html>' }));
+  await page.locator('.header-reminder').click();
+  await expect(page.locator('.feed-status')).toHaveText('Calendar subscriptions are unavailable on this deployment.');
+  await expect(page.locator('dialog [data-provider="google"]')).not.toHaveAttribute('href');
+  const download = page.waitForEvent('download');
+  await page.locator('#reminder-form button[type="submit"]').click();
+  expect((await download).suggestedFilename()).toBe('janat-fasting-90-days.ics');
 });

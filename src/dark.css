@@ -47,6 +47,20 @@ body {
 select option { background: #1d2420; color: #e5e9e2; }
 input { accent-color: #c1d99d; }
 
+.provider-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-block: 20px; }
+.provider-link { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 13px; border: 1px solid #5b7051; border-radius: 4px; background: #283624; color: #e0edcf; font-size: 12px; line-height: 1.6; }
+.provider-link span { flex: 1; }
+.provider-link > svg { width: 15px; height: 15px; }
+.provider-link > svg:last-child { width: 12px; height: 12px; }
+.provider-link:hover { background: #35482d; }
+.provider-link[aria-disabled=true] { opacity: .5; cursor: default; }
+.subscription-options { margin-top: 24px; }
+.subscription-options h3 { font-size: 15px; }
+.feed-url-row { display: flex; align-items: center; gap: 8px; margin-top: 15px; }
+.subscription-url { flex: 1; min-width: 0; width: 100%; border: 1px solid var(--line); border-radius: 4px; background: #151b17; color: var(--muted); padding: 10px; min-height: 38px; font-size: 10px; }
+.feed-status { min-height: 36px; }
+@media (max-width: 390px) { .provider-choices { grid-template-columns: minmax(0, 1fr); } }
+
 .quran-summary { display: grid; grid-template-columns: repeat(3, 1fr) 2fr; gap: 28px; border-block: 1px solid var(--line); padding-block: 27px; margin-block: 30px; }
 .quran-summary > div { display: flex; flex-direction: column; gap: 9px; }
 .quran-summary strong { font-family: var(--display); font-size: 30px; font-weight: 500; }

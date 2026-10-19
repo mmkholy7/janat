@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-Open the URL printed by Vite (normally http://localhost:5173). In GitHub Codespaces, use the forwarded port. `npm run build` produces a static `dist/` directory. Deploy it to any static host at the domain root; no backend or secret is required. Use HTTPS in production.
+Open the URL printed by Vite (normally http://localhost:5173). In GitHub Codespaces, use the forwarded port. `npm run build` produces the frontend in `dist/`. The calendar subscription endpoint lives in `functions/` and requires Cloudflare Pages Functions. Other static hosts retain local tracking, event links, and downloads but not the subscription feed. No secrets or database are required. Use HTTPS in production.
 
 ## Available now
 
@@ -25,10 +25,12 @@ Open the URL printed by Vite (normally http://localhost:5173). In GitHub Codespa
 - A categorized, multilingual directory of Quran, hadith, and established Sunni learning sites at `/#resources`.
 - Local Quran recitation/revision sessions, minutes and pages, daily minute goals, deletion, and JSON export at `/#quran`.
 - A separate 30-day daily Quran calendar download with day-before alerts and distinct event identifiers.
+- Google Calendar, Outlook.com, and Microsoft 365 event drafts without downloading or uploading files.
+- Read-only rolling subscriptions for Google, Outlook, Microsoft 365, and Apple Calendar, backed by a public Cloudflare Pages Function. No account access or personal activity history is shared.
 
 ## Important boundaries
 
-**Email sending is not connected.** This version does not collect email addresses or send messages. Downloading a calendar is not an email subscription or a live calendar feed. Calendar applications control whether, when, and how imported alarms are delivered. Some discard imported alarms: verify notification settings in the chosen calendar. Re-importing the same dates uses stable event UIDs, but deduplication varies by provider. Changing the Hijri adjustment requires importing an updated calendar.
+**Email sending is not connected.** This version does not collect email addresses or send messages. Calendar subscription links are not email subscriptions or OAuth account connections. Providers control refresh timing and notifications; updates can take over 24 hours and imported alarms may be discarded. Event drafts require the user to save the event and configure its reminder. File downloads are snapshots with stable event UIDs; deduplication varies by provider. Changing the Hijri adjustment requires replacing the subscription or importing an updated file.
 
 The logbook is stored in this browser's `localStorage`, without encryption or cross-device sync. Clearing browser data deletes it. Export before changing browsers. Exports currently serve as backups for manual recovery; there is no import interface yet. Private browsing may not retain records. Calendar exports contain the activity name and will be visible to the chosen calendar provider. The page loads fonts from Google Fonts, which receives normal network metadata; landscape photos are served locally. There are no analytics, cookies, or advertising integrations.
 
@@ -50,7 +52,7 @@ If browser downloads are blocked, tests can use an installed Chrome or Edge: set
 ## Next steps
 
 1. **Opt-in email reminders:** add a provider-neutral backend, scheduled delivery, explicit consent, verified addresses, one-click unsubscribe, rate limits, deletion/export, and timezone-aware scheduling. Accept standard relay addresses (Apple Hide My Email, Firefox Relay, SimpleLogin) without requiring a real-name identity. Never place provider keys in the client.
-2. **Live calendar subscriptions:** publish private, revocable feed URLs with clear warnings about calendar-provider refresh delays.
+2. **Calendar integrations:** extend the existing public, non-personal subscription feeds with optional OAuth-based Google Calendar / Microsoft Graph connections for per-user event writes and explicit reminder settings. Private feeds and revocation are necessary only if adding personal records.
 3. **Quran recitation and revision:** extend the local tracker with passage bookmarks, flexible reminder schedules, and optional cross-device sync.
 4. Offline support, optional encrypted backup/sync, community religious review, and verified translation review.
 
@@ -59,3 +61,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development conventions. The reposito
 ## Production and Email Setup
 
 The current deployment is https://janat.uably.com. See [the Resend setup guide](docs/RESEND-SETUP.md) for sending-domain verification, Cloudflare DNS, restricted API keys, the backend launch checklist, and why login should remain optional. Email sending is not implemented in this release. Quran records, like fasting records, are stored locally without encryption or cross-device sync and are included in the JSON export. Pages are counted as entered; no particular mushaf pagination is assumed.
+
+See [calendar integration and deployment](docs/CALENDAR-INTEGRATION.md) for the subscription feed, supported providers, deployment verification, and OAuth boundaries.
