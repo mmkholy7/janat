@@ -31,4 +31,11 @@ describe('fasting calendar', () => {
     expect(result).toContain('SUMMARY:Fast\\, with intention');
     expect(result).toContain(`DTSTART;VALUE=DATE:${dateKey(date).replace(/-/g, '')}`);
   });
+  it('keeps Quran reminders distinct and folds Arabic lines by UTF-8 byte length', () => {
+    const date = new Date(2026, 9, 20, 12);
+    const result = calendarInvite([{ date, key: dateKey(date) }], 'تلاوة القرآن', 'مراجعة القرآن الكريم '.repeat(20), 'quran');
+    expect(result).toContain('UID:quran-2026-10-20@janat.local');
+    expect(result).not.toContain('UID:fast-');
+    expect(result.split('\r\n').every(line => new TextEncoder().encode(line).length <= 75)).toBe(true);
+  });
 });

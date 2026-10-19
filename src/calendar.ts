@@ -36,12 +36,12 @@ export function upcomingDays(start: Date, count = 6, adjustment = 0): FastDay[] 
   return result;
 }
 
-export function calendarInvite(days: FastDay[], title: string, description: string): string {
+export function calendarInvite(days: Pick<FastDay, 'date' | 'key'>[], title: string, description: string, activity: 'fast' | 'quran' = 'fast'): string {
   const escape = (text: string) => text.replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Janat//Fasting Calendar//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
   for (const day of days) {
-    lines.push('BEGIN:VEVENT', `UID:fast-${day.key}@janat.local`, `DTSTAMP:${stamp}`,
+    lines.push('BEGIN:VEVENT', `UID:${activity}-${day.key}@janat.local`, `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${day.key.replace(/-/g, '')}`,
       `DTEND;VALUE=DATE:${dateKey(addDays(day.date, 1)).replace(/-/g, '')}`,
       `SUMMARY:${escape(title)}`, `DESCRIPTION:${escape(description)}`,

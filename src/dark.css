@@ -1,0 +1,115 @@
+:root {
+  color-scheme: dark;
+  color: #e5e9e2;
+  background: #141816;
+  --green: #c1d99d;
+  --ink: #e5e9e2;
+  --muted: #acb5ac;
+  --line: #343e37;
+  --surface: #1d2420;
+  --raised: #27312a;
+}
+
+body {
+  background: radial-gradient(ellipse at top right, #27312855, transparent 65%), #141816;
+}
+
+.site-header, dialog { background: #181e1a; }
+.nav-link, .date-line, footer, .privacy-footer { color: #b7c0b3; }
+.nav-link.active, .brand, .language-select select { color: #d3e4ba; }
+.primary { background: #c1d99d; color: #1c2d1c; }
+.primary:hover { background: #d5e8b7; }
+.outline, .day-card, .calendar-grid, #adjustment { background: var(--surface); border-color: var(--line); }
+.outline:hover, .icon-button:hover { background: var(--raised); }
+.day-card.nearest { background: #253020; border-color: #748c56; }
+.badge, .day-relative, .icon-tile, .modal-icon { background: #33412b; color: #d3e5bb; }
+.badge.white { background: #3c3246; color: #ded0ea; }
+.day-date small, .day-relative, .green, .footer-brand { color: #b6c7a2; }
+.weekday, .empty-state, .privacy-note { background: #222b24; }
+.calendar-cell.fast-day { background: #222e22; }
+.calendar-cell:not(:disabled):hover { background: #344330; }
+.calendar-cell.fasted { background: #2c442d; }
+.calendar-cell.missed { background: #49332d; }
+.calendar-cell.missed .cell-indicator { color: #edbca9; }
+.cell-date small, .cell-indicator { color: #becba9; }
+.cell-indicator:empty { display: none; }
+.calendar-cell.outside { opacity: .55; }
+.future-decoration { color: #354231; }
+.future-icon { color: #a7bc91; }
+.privacy-note p { color: #b4c1aa; }
+.privacy-note strong { color: #e0e9d4; }
+.log-total, .log-status { color: #c1d99d; }
+.log-total.missed, .log-status.missed, .danger { color: #e8b4a1; }
+.status-icon { background: #34462d; color: #d6e9bb; }
+.status-icon.missed { background: #50372e; color: #edbca9; }
+.hero-shade { background: linear-gradient(90deg, #091b17d9, #14251c66 55%, #0c1c18b3), linear-gradient(0deg, #0e211b88, transparent 50%); }
+.source-links a:hover { color: #c1d99d; }
+select option { background: #1d2420; color: #e5e9e2; }
+input { accent-color: #c1d99d; }
+
+.quran-summary { display: grid; grid-template-columns: repeat(3, 1fr) 2fr; gap: 28px; border-block: 1px solid var(--line); padding-block: 27px; margin-block: 30px; }
+.quran-summary > div { display: flex; flex-direction: column; gap: 9px; }
+.quran-summary strong { font-family: var(--display); font-size: 30px; font-weight: 500; }
+.quran-summary span { color: var(--muted); font-size: 12px; }
+.quran-progress { border-inline-start: 1px solid var(--line); padding-inline-start: 30px; }
+.quran-progress strong { font-size: 19px; }
+.quran-progress progress { width: 100%; height: 8px; accent-color: #c1d99d; border: 0; border-radius: 3px; overflow: hidden; }
+progress::-webkit-progress-bar { background: #343e37; }
+progress::-webkit-progress-value { background: #c1d99d; }
+.quran-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 60px; }
+.quran-layout h2 { font-size: 18px; margin-bottom: 22px; }
+.quran-entry { border-inline-end: 1px solid var(--line); padding-inline-end: 28px; }
+.quran-entry label { display: block; font-size: 12px; color: #c4cdbf; margin-bottom: 8px; }
+.quran-entry input, .quran-entry select { display: block; width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--line); border-radius: 4px; padding: 10px; background: #1d2420; color: var(--ink); font-size: 13px; margin-bottom: 20px; }
+.quran-numbers { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.quran-numbers input { margin-top: 8px; margin-bottom: 0; }
+#quran-goal { border-top: 1px solid var(--line); padding-top: 24px; margin-top: 27px; }
+#quran-goal > div { display: flex; gap: 10px; align-items: start; }
+#quran-goal .icon-button { min-height: 44px; width: 44px; background: #33412b; }
+.quran-row { display: flex; gap: 15px; align-items: center; border-bottom: 1px solid var(--line); padding: 18px 0; font-size: 13px; }
+.quran-row small { display: block; color: var(--muted); font-size: 11px; margin-top: 7px; }
+.quran-row-totals { margin-inline-start: auto; text-align: end; }
+.quran-tools { display: flex; flex-wrap: wrap; gap: 25px; margin-top: 20px; }
+.quran-section > .fine-print { margin-top: 25px; }
+@media (min-width: 761px) and (max-width: 1050px) {
+  .header-inner { height: auto; min-height: 110px; flex-wrap: wrap; padding-block: 17px 0; }
+  nav { order: 3; flex-basis: 100%; height: 43px; justify-content: center; margin-top: 6px; }
+}
+@media (max-width: 760px) {
+  .quran-layout { grid-template-columns: minmax(0, 1fr); gap: 35px; }
+  .quran-entry { border-inline-end: 0; padding-inline-end: 0; }
+  .quran-summary { gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .quran-progress { grid-column: 1 / -1; border-inline-start: 0; padding-inline-start: 0; padding-top: 12px; }
+  .quran-row { gap: 10px; font-size: 12px; }
+  .quran-row .icon-tile { width: 33px; height: 33px; }
+  .quran-row small { font-size: 10px; }
+}
+
+.resource-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.resource-card { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 25px; }
+.resource-category { display: flex; align-items: center; gap: 8px; color: #c1d99d; font-size: 11px; }
+.resource-card h2 { font-size: 21px; margin-top: 22px; overflow-wrap: anywhere; }
+.resource-card p { font-size: 13px; color: var(--muted); line-height: 1.9; margin-block: 14px 25px; }
+.resource-link { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 12px; color: #d2e4b7; margin-top: auto; }
+.resource-link span { flex-basis: 100%; font-size: 10px; color: var(--muted); margin-top: 7px; overflow-wrap: anywhere; }
+.resource-link svg { width: 14px; height: 14px; }
+.resource-note { display: flex; align-items: flex-start; gap: 10px; font-size: 12px; line-height: 1.9; color: var(--muted); margin-top: 30px; max-width: 850px; }
+.resource-note svg { margin-top: 4px; }
+.resource-filter select { max-width: 220px; padding: 12px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; font-size: 12px; }
+@media (max-width: 1100px) {
+  nav { gap: 22px; }
+  .resource-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  nav { gap: 14px; }
+  .resources-section .section-heading { align-items: start; flex-direction: column; }
+}
+@media (max-width: 500px) {
+  .resource-grid { grid-template-columns: minmax(0, 1fr); }
+  .resource-card { padding: 22px; }
+}
+@media (max-width: 390px) {
+  nav { gap: 10px; }
+  .nav-link { font-size: 11px; }
+  html[dir=rtl] .nav-link { font-size: 14px; }
+}

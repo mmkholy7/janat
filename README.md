@@ -21,6 +21,10 @@ Open the URL printed by Vite (normally http://localhost:5173). In GitHub Codespa
 - Private local fasting logbook: fasted, not fasted, or not logged. Month and lifetime totals. JSON export and local deletion.
 - Rotating, locally hosted nature photography with sourced Quran excerpts and a sourced hadith reminder.
 - Responsive layouts, RTL, keyboard-accessible dialogs, and reduced-motion support.
+- Dark backgrounds throughout the calendar, logbook, dialogs, and resource pages.
+- A categorized, multilingual directory of Quran, hadith, and established Sunni learning sites at `/#resources`.
+- Local Quran recitation/revision sessions, minutes and pages, daily minute goals, deletion, and JSON export at `/#quran`.
+- A separate 30-day daily Quran calendar download with day-before alerts and distinct event identifiers.
 
 ## Important boundaries
 
@@ -47,7 +51,11 @@ If browser downloads are blocked, tests can use an installed Chrome or Edge: set
 
 1. **Opt-in email reminders:** add a provider-neutral backend, scheduled delivery, explicit consent, verified addresses, one-click unsubscribe, rate limits, deletion/export, and timezone-aware scheduling. Accept standard relay addresses (Apple Hide My Email, Firefox Relay, SimpleLogin) without requiring a real-name identity. Never place provider keys in the client.
 2. **Live calendar subscriptions:** publish private, revocable feed URLs with clear warnings about calendar-provider refresh delays.
-3. **Quran recitation and revision:** introduce a shared activity model when implementing the second activity, with its own schedules and progress tracking. The current Quran section is explicitly a future feature.
+3. **Quran recitation and revision:** extend the local tracker with passage bookmarks, flexible reminder schedules, and optional cross-device sync.
 4. Offline support, optional encrypted backup/sync, community religious review, and verified translation review.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development conventions. The repository has Codespaces configuration and CI. A project license still needs to be selected by the maintainer; no license is implied by public hosting.
+
+## Production and Email Setup
+
+The current deployment is https://janat.uably.com. See [the Resend setup guide](docs/RESEND-SETUP.md) for sending-domain verification, Cloudflare DNS, restricted API keys, the backend launch checklist, and why login should remain optional. Email sending is not implemented in this release. Quran records, like fasting records, are stored locally without encryption or cross-device sync and are included in the JSON export. Pages are counted as entered; no particular mushaf pagination is assumed.
