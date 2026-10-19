@@ -1,0 +1,12 @@
+{
+  "name": "Janat",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "forwardPorts": [5173],
+  "portsAttributes": {
+    "5173": { "label": "Janat", "onAutoForward": "openPreview" }
+  },
+  "postCreateCommand": "npm ci",
+  "customizations": {
+    "vscode": { "extensions": ["esbenp.prettier-vscode"] }
+  }
+}
