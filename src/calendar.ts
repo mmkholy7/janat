@@ -56,7 +56,8 @@ export function calendarSubscriptionLinks(feedUrl: string, title: string) {
   const microsoft = new URLSearchParams({ url: feed.href, name: title });
   const webcal = new URL(`webcal:${feed.href.slice(feed.protocol.length)}`);
   return {
-    google: `https://calendar.google.com/calendar/r?${new URLSearchParams({ cid: feed.href })}`,
+    // Google only recognizes webcal URLs in cid; an https value is treated as a calendar ID and ignored
+    google: `https://calendar.google.com/calendar/render?${new URLSearchParams({ cid: webcal.href })}`,
     outlook: `https://outlook.live.com/calendar/0/addfromweb?${microsoft}`,
     office365: `https://outlook.office.com/calendar/0/addfromweb?${microsoft}`,
     apple: webcal.href,
@@ -72,7 +73,7 @@ export function calendarInvite(days: Pick<FastDay, 'date' | 'key'>[], title: str
       `DTSTART;VALUE=DATE:${day.key.replace(/-/g, '')}`,
       `DTEND;VALUE=DATE:${dateKey(addDays(day.date, 1)).replace(/-/g, '')}`,
       `SUMMARY:${escape(title)}`, `DESCRIPTION:${escape(description)}`,
-      'BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY', `DESCRIPTION:${escape(title)}`, 'END:VALARM', 'END:VEVENT');
+      'BEGIN:VALARM', 'TRIGGER:-PT8H', 'ACTION:DISPLAY', `DESCRIPTION:${escape(title)}`, 'END:VALARM', 'END:VEVENT');
   }
   lines.push('END:VCALENDAR');
   const encoder = new TextEncoder();

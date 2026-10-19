@@ -17,14 +17,14 @@ Open the URL printed by Vite (normally http://localhost:5173). In GitHub Codespa
 
 - Umm al-Qura Hijri dates, including 1448 AH, alongside Gregorian dates; local adjustment of -1, 0, or +1 day.
 - Deduplicated weekly and white-day schedules. Eid al-Fitr, Eid al-Adha, and the days of Tashriq are excluded.
-- A 90-day calendar invitation download with a day-before `VALARM`, plus individual event downloads. Choose weekly days, white days, or both.
+- A 90-day calendar invitation download with an 8-hour-ahead `VALARM`, plus individual event downloads. Choose weekly days, white days, or both.
 - Private local fasting logbook: fasted, not fasted, or not logged. Month and lifetime totals. JSON export and local deletion.
 - Rotating, locally hosted nature photography with sourced Quran excerpts and a sourced hadith reminder.
 - Responsive layouts, RTL, keyboard-accessible dialogs, and reduced-motion support.
 - Dark backgrounds throughout the calendar, logbook, dialogs, and resource pages.
 - A categorized, multilingual directory of Quran, hadith, and established Sunni learning sites at `/#resources`.
 - Local Quran recitation/revision sessions, minutes and pages, daily minute goals, deletion, and JSON export at `/#quran`.
-- A separate 30-day daily Quran calendar download with day-before alerts and distinct event identifiers.
+- A separate 30-day daily Quran calendar download with 8-hour-ahead alerts and distinct event identifiers.
 - Google Calendar, Outlook.com, and Microsoft 365 event drafts without downloading or uploading files.
 - Read-only rolling subscriptions for Google, Outlook, Microsoft 365, and Apple Calendar, backed by a public Cloudflare Pages Function. No account access or personal activity history is shared.
 

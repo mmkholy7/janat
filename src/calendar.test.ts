@@ -6,7 +6,7 @@ describe('fasting calendar', () => {
   it('links providers to the full subscription URL without losing preferences', () => {
     const feed = 'https://janat.uably.com/api/calendar?activity=fast&lang=ar&weekly=false&white=true&adjustment=1';
     const links = calendarSubscriptionLinks(feed, 'تقويم جنات');
-    expect(new URL(links.google).searchParams.get('cid')).toBe(feed);
+    expect(new URL(links.google).searchParams.get('cid')).toBe(feed.replace('https:', 'webcal:'));
     expect(new URL(links.outlook).searchParams.get('url')).toBe(feed);
     expect(new URL(links.office365).searchParams.get('name')).toBe('تقويم جنات');
     expect(links.apple).toBe(feed.replace('https:', 'webcal:'));
@@ -73,12 +73,12 @@ describe('fasting calendar', () => {
       else if (hijri.day >= 13 && hijri.day <= 15) expect(fastDay(date)?.reasons).toContain('white');
     }
   });
-  it('applies local date adjustments and exports day-before reminders', () => {
+  it('applies local date adjustments and exports reminders 8 hours ahead', () => {
     const date = new Date(2026, 9, 19, 12);
     expect(hijriDate(date, 1)).toEqual(hijriDate(addDays(date, 1)));
     const result = calendarInvite(upcomingDays(date, 2), 'Fast, with intention', 'A reminder; tomorrow');
     expect(result.match(/BEGIN:VEVENT/g)).toHaveLength(2);
-    expect(result).toContain('TRIGGER:-P1D');
+    expect(result).toContain('TRIGGER:-PT8H');
     expect(result).toContain('SUMMARY:Fast\\, with intention');
     expect(result).toContain(`DTSTART;VALUE=DATE:${dateKey(date).replace(/-/g, '')}`);
   });

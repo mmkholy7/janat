@@ -60,7 +60,7 @@ test('exports actual calendar events and persists calendar adjustment', async ({
   const chunks = []; for await (const chunk of stream) chunks.push(chunk);
   const calendar = Buffer.concat(chunks).toString('utf8');
   expect(calendar).toContain('BEGIN:VCALENDAR');
-  expect(calendar).toContain('TRIGGER:-P1D');
+  expect(calendar).toContain('TRIGGER:-PT8H');
   expect(calendar.match(/BEGIN:VEVENT/g)!.length).toBeGreaterThan(20);
   await page.locator('dialog [data-action="settings"]').click();
   await page.locator('#adjustment').selectOption('1');
@@ -159,7 +159,7 @@ test('calendar providers open drafts and subscribe without file imports', async 
   await expect(page.locator('.feed-status')).toBeEmpty({ timeout: 15000 });
   await expect(page.locator('dialog [data-provider="google"]')).toHaveAttribute('href', /weekly%3Dfalse/);
   const subscribe = new URL((await page.locator('dialog [data-provider="google"]').getAttribute('href'))!);
-  const feed = new URL(subscribe.searchParams.get('cid')!);
+  const feed = new URL(subscribe.searchParams.get('cid')!.replace(/^webcal:/, 'http:'));
   expect(feed.searchParams.get('white')).toBe('true');
   expect(feed.searchParams.has('email')).toBe(false);
   const response = await request.get(feed.href);

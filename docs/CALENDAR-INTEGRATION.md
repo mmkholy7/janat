@@ -2,10 +2,10 @@
 
 ## Available without accounts or API credentials
 
-- Individual fasting dates open a prefilled Google Calendar, Outlook.com, or Microsoft 365 event draft. Users save the event in their own calendar. These links cannot set reliable day-before notification preferences; users must configure reminders in their calendar before saving.
+- Individual fasting dates open a prefilled Google Calendar, Outlook.com, or Microsoft 365 event draft. Users save the event in their own calendar. These links cannot set reliable notification preferences; users must configure reminders in their calendar before saving.
 - The Reminders dialog offers a read-only subscription for all fasting days matching the selected schedule. Quran has a separate daily subscription. No download/upload is required.
 - A subscription URL is available for providers that do not accept the convenience links. Google documents setup from a desktop web browser under **Other calendars > From URL**. Outlook supports **Add calendar > Subscribe from web**. Apple supports `webcal` URLs. Mobile-app and managed-work-account support varies.
-- File downloads remain a fallback and contain day-before alarms. Some providers ignore imported alarms, particularly on subscribed calendars. These are not guaranteed notification delivery mechanisms.
+- File downloads remain a fallback and contain alarms 8 hours before each day begins. Some providers ignore imported alarms, particularly on subscribed calendars. These are not guaranteed notification delivery mechanisms.
 
 ## Public feed
 

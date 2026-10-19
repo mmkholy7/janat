@@ -1,3 +1,5 @@
+/* Dark theme: only when the user prefers it */
+@media (prefers-color-scheme: dark) {
 :root {
   color-scheme: dark;
   color: #e5e9e2;
@@ -6,6 +8,7 @@
   --ink: #e5e9e2;
   --muted: #acb5ac;
   --line: #343e37;
+  --lime: #33412b;
   --surface: #1d2420;
   --raised: #27312a;
 }
@@ -45,20 +48,27 @@ body {
 .hero-shade { background: linear-gradient(90deg, #091b17d9, #14251c66 55%, #0c1c18b3), linear-gradient(0deg, #0e211b88, transparent 50%); }
 .source-links a:hover { color: #c1d99d; }
 select option { background: #1d2420; color: #e5e9e2; }
-input { accent-color: #c1d99d; }
+}
+
+input { accent-color: var(--green); }
 
 .provider-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-block: 20px; }
-.provider-link { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 13px; border: 1px solid #5b7051; border-radius: 4px; background: #283624; color: #e0edcf; font-size: 12px; line-height: 1.6; }
+.provider-link { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 13px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--ink); font-size: 12px; line-height: 1.6; }
 .provider-link span { flex: 1; }
 .provider-link > svg { width: 15px; height: 15px; }
 .provider-link > svg:last-child { width: 12px; height: 12px; }
-.provider-link:hover { background: #35482d; }
+.provider-link:hover { background: var(--raised); }
 .provider-link[aria-disabled=true] { opacity: .5; cursor: default; }
 .subscription-options { margin-top: 24px; }
 .subscription-options h3 { font-size: 15px; }
 .feed-url-row { display: flex; align-items: center; gap: 8px; margin-top: 15px; }
-.subscription-url { flex: 1; min-width: 0; width: 100%; border: 1px solid var(--line); border-radius: 4px; background: #151b17; color: var(--muted); padding: 10px; min-height: 38px; font-size: 10px; }
+.subscription-url { flex: 1; min-width: 0; width: 100%; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--muted); padding: 10px; min-height: 38px; font-size: 10px; }
 .feed-status { min-height: 36px; }
+@media (prefers-color-scheme: dark) {
+  .provider-link { border-color: #5b7051; background: #283624; color: #e0edcf; }
+  .provider-link:hover { background: #35482d; }
+  .subscription-url { background: #151b17; }
+}
 @media (max-width: 390px) { .provider-choices { grid-template-columns: minmax(0, 1fr); } }
 
 .quran-summary { display: grid; grid-template-columns: repeat(3, 1fr) 2fr; gap: 28px; border-block: 1px solid var(--line); padding-block: 27px; margin-block: 30px; }
@@ -67,19 +77,19 @@ input { accent-color: #c1d99d; }
 .quran-summary span { color: var(--muted); font-size: 12px; }
 .quran-progress { border-inline-start: 1px solid var(--line); padding-inline-start: 30px; }
 .quran-progress strong { font-size: 19px; }
-.quran-progress progress { width: 100%; height: 8px; accent-color: #c1d99d; border: 0; border-radius: 3px; overflow: hidden; }
-progress::-webkit-progress-bar { background: #343e37; }
-progress::-webkit-progress-value { background: #c1d99d; }
+.quran-progress progress { width: 100%; height: 8px; accent-color: var(--green); border: 0; border-radius: 3px; overflow: hidden; }
+progress::-webkit-progress-bar { background: var(--line); }
+progress::-webkit-progress-value { background: var(--green); }
 .quran-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 60px; }
 .quran-layout h2 { font-size: 18px; margin-bottom: 22px; }
 .quran-entry { border-inline-end: 1px solid var(--line); padding-inline-end: 28px; }
-.quran-entry label { display: block; font-size: 12px; color: #c4cdbf; margin-bottom: 8px; }
-.quran-entry input, .quran-entry select { display: block; width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--line); border-radius: 4px; padding: 10px; background: #1d2420; color: var(--ink); font-size: 13px; margin-bottom: 20px; }
+.quran-entry label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.quran-entry input, .quran-entry select { display: block; width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--line); border-radius: 4px; padding: 10px; background: var(--surface); color: var(--ink); font-size: 13px; margin-bottom: 20px; }
 .quran-numbers { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 .quran-numbers input { margin-top: 8px; margin-bottom: 0; }
 #quran-goal { border-top: 1px solid var(--line); padding-top: 24px; margin-top: 27px; }
 #quran-goal > div { display: flex; gap: 10px; align-items: start; }
-#quran-goal .icon-button { min-height: 44px; width: 44px; background: #33412b; }
+#quran-goal .icon-button { min-height: 44px; width: 44px; background: var(--lime); }
 .quran-row { display: flex; gap: 15px; align-items: center; border-bottom: 1px solid var(--line); padding: 18px 0; font-size: 13px; }
 .quran-row small { display: block; color: var(--muted); font-size: 11px; margin-top: 7px; }
 .quran-row-totals { margin-inline-start: auto; text-align: end; }
@@ -101,10 +111,10 @@ progress::-webkit-progress-value { background: #c1d99d; }
 
 .resource-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 .resource-card { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 25px; }
-.resource-category { display: flex; align-items: center; gap: 8px; color: #c1d99d; font-size: 11px; }
+.resource-category { display: flex; align-items: center; gap: 8px; color: var(--green); font-size: 11px; }
 .resource-card h2 { font-size: 21px; margin-top: 22px; overflow-wrap: anywhere; }
 .resource-card p { font-size: 13px; color: var(--muted); line-height: 1.9; margin-block: 14px 25px; }
-.resource-link { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 12px; color: #d2e4b7; margin-top: auto; }
+.resource-link { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 12px; color: var(--green); margin-top: auto; }
 .resource-link span { flex-basis: 100%; font-size: 10px; color: var(--muted); margin-top: 7px; overflow-wrap: anywhere; }
 .resource-link svg { width: 14px; height: 14px; }
 .resource-note { display: flex; align-items: flex-start; gap: 10px; font-size: 12px; line-height: 1.9; color: var(--muted); margin-top: 30px; max-width: 850px; }
