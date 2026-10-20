@@ -11,7 +11,7 @@
 .power-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
 .power-card{position:relative;overflow:hidden;border-radius:8px;aspect-ratio:4/5;background:#112019;animation:rise .8s both}
 .power-card video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:drift 24s ease-in-out infinite alternate}
-.power-overlay{position:absolute;inset:auto 0 0 0;padding:90px 22px 22px;background:linear-gradient(0deg,#07150eeb 30%,#07150e8c 68%,transparent);color:#f2f7ec;text-shadow:0 1px 10px #07150e66}
+.power-overlay{position:absolute;inset:auto 0 0 0;padding:90px 22px 22px;background:linear-gradient(0deg,#07150ef7 32%,#07150eb3 70%,transparent);color:#f2f7ec;text-shadow:0 1px 8px #07150e99}
 .power-overlay h3{font-size:19px;color:#fff}
 .power-overlay p{font-size:12px;line-height:1.8;margin-top:8px;color:#dde9d2}
 @keyframes rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
