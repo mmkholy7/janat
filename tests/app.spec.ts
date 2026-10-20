@@ -9,7 +9,10 @@ test('landscapes render and all four languages fit the viewport', async ({ page 
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await expect(page.locator('h1')).toContainText('A little intention');
+  expect(await page.locator('html').evaluate(element => getComputedStyle(element).colorScheme)).toBe('light');
+  await page.emulateMedia({ colorScheme: 'dark' });
   expect(await page.locator('html').evaluate(element => getComputedStyle(element).colorScheme)).toBe('dark');
+  await page.emulateMedia({ colorScheme: 'light' });
   for (const language of ['en', 'ar', 'fr', 'es']) {
     await page.locator('#language').selectOption(language);
     await expect(page.locator('html')).toHaveAttribute('lang', language);

@@ -42,6 +42,10 @@ export const en = {
   backup: 'Export logbook', reset: 'Delete local logbook', resetConfirm: 'Delete all fasting records from this browser? This cannot be undone.',
   storageError: 'Browser storage is unavailable. Changes will not survive a reload.', all: 'All entries', total: 'Total fasts recorded',
   selectDate: 'Select a past or current date to record your fast.', landscape: 'Mountain landscape', changeScene: 'Change landscape',
+  power: 'The power of fasting', powerIntro: 'Beloved by Allah, cherished by the Prophet صلى الله عليه وسلم, and a gift to body and soul.',
+  powerRewardsTitle: 'A reward beyond measure', powerRewardsText: '“Every deed of the son of Adam is multiplied… except fasting; it is for Me and I shall reward it.” Sahih al-Bukhari 1894.',
+  powerDuaTitle: 'A du’aa that is not turned away', powerDuaText: 'The fasting person has a supplication at the breaking of the fast that is not rejected. Sunan Ibn Majah 1753.',
+  powerHealthTitle: 'Strength for body and mind', powerHealthText: 'Fasting days bring lighter mornings, steadier energy, and mindful eating — a renewal for the heart and the body.',
 };
 export type Language = 'en' | 'ar' | 'fr' | 'es';
 export type Messages = typeof en;
@@ -89,6 +93,10 @@ const fr: Messages = {
   backup: 'Exporter le journal', reset: 'Supprimer le journal local', resetConfirm: 'Supprimer tous les jeûnes de ce navigateur ? Cette action est irréversible.',
   storageError: 'Stockage du navigateur indisponible. Les modifications ne seront pas conservées.', all: 'Toutes les entrées', total: 'Total des jeûnes enregistrés',
   selectDate: 'Choisissez une date passée ou actuelle pour noter votre jeûne.', landscape: 'Paysage de montagne', changeScene: 'Changer de paysage',
+  power: 'La force du jeûne', powerIntro: 'Aimé d’Allah, chéri par le Prophète صلى الله عليه وسلم, un bienfait pour le corps et l’âme.',
+  powerRewardsTitle: 'Une récompense sans mesure', powerRewardsText: '« Toute œuvre du fils d’Adam est multipliée… sauf le jeûne : il est à Moi et c’est Moi qui le récompense. » Sahih al-Bukhari 1894.',
+  powerDuaTitle: 'Une invocation qui n’est pas rejetée', powerDuaText: 'Le jeûneur a, au moment de rompre le jeûne, une invocation qui n’est pas repoussée. Sunan Ibn Majah 1753.',
+  powerHealthTitle: 'Une force pour le corps et l’esprit', powerHealthText: 'Les jours de jeûne apportent des matins plus légers, une énergie plus stable et une alimentation consciente — un renouveau pour le cœur et le corps.',
 };
 const es: Messages = {
   calendarProvider: 'Elige tu calendario', subscribeCalendar: 'Suscribirse al programa', copyCalendarUrl: 'Copiar enlace de suscripción', calendarUrlCopied: 'Enlace de suscripción copiado',
@@ -134,6 +142,10 @@ const es: Messages = {
   backup: 'Exportar diario', reset: 'Eliminar diario local', resetConfirm: '¿Eliminar todos los registros de este navegador? No se puede deshacer.',
   storageError: 'Almacenamiento no disponible. Los cambios no se conservarán al recargar.', all: 'Todas las entradas', total: 'Total de ayunos registrados',
   selectDate: 'Selecciona una fecha pasada o actual para registrar tu ayuno.', landscape: 'Paisaje de montaña', changeScene: 'Cambiar paisaje',
+  power: 'El poder del ayuno', powerIntro: 'Amado por Allah, querido por el Profeta صلى الله عليه وسلم, y un regalo para el cuerpo y el alma.',
+  powerRewardsTitle: 'Una recompensa sin medida', powerRewardsText: '«Toda obra del hijo de Adán se multiplica… excepto el ayuno: es para Mí y Yo lo recompenso». Sahih al-Bukhari 1894.',
+  powerDuaTitle: 'Una súplica que no se rechaza', powerDuaText: 'El ayunante tiene, al romper el ayuno, una súplica que no es rechazada. Sunan Ibn Majah 1753.',
+  powerHealthTitle: 'Fuerza para el cuerpo y la mente', powerHealthText: 'Los días de ayuno traen mañanas más ligeras, energía más estable y una alimentación consciente: una renovación para el corazón y el cuerpo.',
 };
 const ar: Messages = {
   calendarProvider: 'اختر تقويمك', subscribeCalendar: 'الاشتراك في الجدول', copyCalendarUrl: 'نسخ رابط الاشتراك', calendarUrlCopied: 'تم نسخ رابط الاشتراك',
@@ -179,6 +191,10 @@ const ar: Messages = {
   backup: 'تصدير السجل', reset: 'حذف السجل المحلي', resetConfirm: 'حذف جميع سجلات الصيام من هذا المتصفح؟ لا يمكن التراجع.',
   storageError: 'التخزين غير متاح. لن تبقى التغييرات بعد إعادة التحميل.', all: 'جميع السجلات', total: 'إجمالي أيام الصيام المسجلة',
   selectDate: 'اختر يومًا سابقًا أو اليوم لتسجيل صيامك.', landscape: 'منظر جبلي', changeScene: 'تغيير المنظر',
+  power: 'قوة الصيام', powerIntro: 'عبادة يحبها الله، حرص عليها النبي صلى الله عليه وسلم، وخير للجسد والروح.',
+  powerRewardsTitle: 'أجر بغير حساب', powerRewardsText: '«كل عمل ابن آدم يضاعف… إلا الصوم، فإنه لي وأنا أجزي به». صحيح البخاري ١٨٩٤.',
+  powerDuaTitle: 'دعوة لا ترد', powerDuaText: 'للصائم عند فطره دعوة لا ترد. سنن ابن ماجه ١٧٥٣.',
+  powerHealthTitle: 'قوة للجسد والعقل', powerHealthText: 'أيام الصيام تمنح صباحًا أخف وطاقة أثبت ووعيًا بالطعام — تجديد للقلب والبدن.',
 };
 export const messages: Record<Language, Messages> = { en, ar, fr, es };
 export const locales: Record<Language, string> = { en: 'en-GB', ar: 'ar-SA', fr: 'fr-FR', es: 'es-ES' };

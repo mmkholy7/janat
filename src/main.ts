@@ -89,6 +89,15 @@ function upcoming() {
   return `<section class="upcoming-section"><div class="section-heading"><div><div class="eyebrow green">${text().intentions}</div><h2>${text().nextDays}</h2><p>${text().upcomingText}</p></div><button class="text-button" data-view="calendar">${text().viewCalendar}${icon('arrow-right')}</button></div>
     <div class="day-cards">${days.map((day, index) => `<article class="day-card ${index === 0 ? 'nearest' : ''}"><div class="day-top"><span>${format(day.date, { weekday: 'long' })}</span><span class="day-relative">${relativeDate(day.date)}</span></div><div class="day-date">${number(day.date.getDate())}<span>${format(day.date, { month: 'long' })}<small>${hijriLabel(day.date, { day: 'numeric', month: 'long' })}</small></span></div><div class="day-tags">${badges(day)}</div><button class="card-action" data-action="${day.key <= dateKey(today()) ? 'record' : 'invite'}" data-date="${day.key}">${day.key <= dateKey(today()) ? (logbook[day.key] ? text()[logbook[day.key]] : text().record) : text().setReminder}${icon(day.key <= dateKey(today()) ? 'check' : 'arrow-up-right')}</button></article>`).join('')}</div></section>`;
 }
+function power() {
+  const cards = [
+    { file: 'salah', title: text().powerRewardsTitle, body: text().powerRewardsText },
+    { file: 'dua', title: text().powerDuaTitle, body: text().powerDuaText },
+    { file: 'dates', title: text().powerHealthTitle, body: text().powerHealthText },
+  ];
+  return `<section class="power-section"><div class="section-heading"><div><div class="eyebrow green">${text().tagline}</div><h2>${text().power}</h2><p>${text().powerIntro}</p></div></div>
+    <div class="power-grid">${cards.map((card, index) => `<article class="power-card" style="animation-delay:${index * 130}ms"><video src="/videos/${card.file}.mp4" muted loop playsinline preload="metadata" aria-hidden="true" tabindex="-1"></video><div class="power-overlay"><h3>${card.title}</h3><p>${card.body}</p></div></article>`).join('')}</div></section>`;
+}
 function calendarView() {
   const start = new Date(month.getFullYear(), month.getMonth(), 1, 12);
   const shift = (start.getDay() + 6) % 7;
@@ -139,9 +148,13 @@ function render() {
   app.innerHTML = `<header class="site-header"><div class="header-inner"><a class="brand" href="#" data-view="home" aria-label="Janat">${icon('leaf')}<span>janat<span class="brand-dot">.</span></span><span class="brand-ar" lang="ar">جنّات</span></a>
     <nav aria-label="${text().home}">${(['home', 'calendar', 'logbook', 'quran', 'resources'] as View[]).map(item => `<button class="nav-link ${view === item ? 'active' : ''}" data-view="${item}" ${view === item ? 'aria-current="page"' : ''}>${text()[item]}</button>`).join('')}</nav>
     <div class="header-actions"><label class="language-select">${icon('globe')}<select id="language" aria-label="Language / اللغة"><option value="en" ${lang === 'en' ? 'selected' : ''}>EN</option><option value="ar" ${lang === 'ar' ? 'selected' : ''}>العربية</option><option value="fr" ${lang === 'fr' ? 'selected' : ''}>FR</option><option value="es" ${lang === 'es' ? 'selected' : ''}>ES</option></select></label><button class="button primary header-reminder" data-action="reminders" aria-label="${text().reminders}" title="${text().reminders}">${icon('bell')}<span>${text().reminders}</span></button></div></div></header>
-    <main>${view === 'home' ? `<div class="date-line container"><span>${icon('sun')}${format(today(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span><span>${hijriLabel(today())}<span class="date-dot"></span>${text().hijriYear} ${number(hijriDate(today(), preferences.adjustment).year)}</span></div>${hero()}<div class="container">${stats()}${upcoming()}<section class="future-band"><div class="future-icon">${icon('book-open')}</div><div><span class="eyebrow green">${text().recitation} & ${text().revision}</span><h2>${text().quran}</h2><p>${text().quranIntro}</p><button class="text-button" data-view="quran">${text().quranHistory}${icon('arrow-right')}</button></div><span class="future-decoration" lang="ar">اقرأ</span></section></div>` : `<div class="container">${view === 'calendar' ? calendarView() : view === 'resources' ? resourcesView() : view === 'quran' ? quranView() : logbookView()}</div>`}</main>
+    <main>${view === 'home' ? `<div class="date-line container"><span>${icon('sun')}${format(today(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span><span>${hijriLabel(today())}<span class="date-dot"></span>${text().hijriYear} ${number(hijriDate(today(), preferences.adjustment).year)}</span></div>${hero()}<div class="container">${stats()}${upcoming()}${power()}<section class="future-band"><div class="future-icon">${icon('book-open')}</div><div><span class="eyebrow green">${text().recitation} & ${text().revision}</span><h2>${text().quran}</h2><p>${text().quranIntro}</p><button class="text-button" data-view="quran">${text().quranHistory}${icon('arrow-right')}</button></div><span class="future-decoration" lang="ar">اقرأ</span></section></div>` : `<div class="container">${view === 'calendar' ? calendarView() : view === 'resources' ? resourcesView() : view === 'quran' ? quranView() : logbookView()}</div>`}</main>
     <footer class="container"><span class="footer-brand">${icon('leaf')}janat.</span><span>${text().footer}</span><button class="text-button" data-action="sources">${text().source}${icon('arrow-up-right')}</button><span class="privacy-footer">${icon('shield-check')}${text().privacyTitle}</span></footer><dialog id="modal" aria-labelledby="modal-title"></dialog>`;
   bind(); createIcons({ icons });
+  document.querySelectorAll<HTMLVideoElement>('.power-card video').forEach(video => {
+    video.muted = true;
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) void video.play().catch(() => {});
+  });
   if (!storageAvailable) toast(text().storageError);
 }
 function downloadFile(content: string, filename: string, type: string) {
