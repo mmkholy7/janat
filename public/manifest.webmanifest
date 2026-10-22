@@ -1,0 +1,17 @@
+{
+  "name": "Janat · Sunnah fasting calendar",
+  "short_name": "Janat",
+  "description": "A free, private calendar for Sunnah fasts — Mondays, Thursdays, the White Days — with a fasting logbook and Quran tracker.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fcfdfb",
+  "theme_color": "#245442",
+  "categories": ["lifestyle", "productivity", "education"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

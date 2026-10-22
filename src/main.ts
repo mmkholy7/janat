@@ -1,22 +1,29 @@
-import { createIcons, Leaf, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2 } from 'lucide';
+import { createIcons, Leaf, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library } from 'lucide';
 import { addDays, calendarEventLinks, calendarInvite, calendarSubscriptionLinks, dateKey, fastDay, hijriDate, upcomingDays, type FastDay, type FastStatus } from './calendar';
-import { messages, locales, verses, hadith, type Language } from './i18n';
+import { loadMessages, locales, verses, type Messages } from './i18n';
+import { detectLanguage, fontUrl, isLanguage, languageFromPath, languageInfo, languageLink, languagePath, languages, type Language } from './languages';
+import en from './locales/en';
+import { faqSection } from './faq';
 import { resources, type ResourceCategory } from './resources';
 import './style.css';
 import './dark.css';
+import './design.css';
 
 type View = 'home' | 'calendar' | 'logbook' | 'quran' | 'resources';
 type Preferences = { language: Language; adjustment: number; weekly: boolean; white: boolean; quranGoal: number };
 type QuranSession = { id: string; date: string; kind: 'recitation' | 'revision'; minutes: number; pages: number };
 const app = document.querySelector<HTMLDivElement>('#app')!;
-const icons = { Leaf, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2 };
+const icons = { Leaf, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library };
+const navIcons: Record<View, string> = { home: 'house', calendar: 'calendar-days', logbook: 'notebook-pen', quran: 'book-open', resources: 'library' };
+const shortLanguageNames: Partial<Record<Language, string>> = { ar: 'عربي', ur: 'اردو', bn: 'বাংলা', fa: 'فارسی' };
 let storageAvailable = true;
 function load(key: string): unknown {
   try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { storageAvailable = false; return null; }
 }
 const rawPreferences = load('janat.preferences') as Partial<Preferences> | null;
+const storedLanguage = isLanguage(rawPreferences?.language) ? rawPreferences.language : undefined;
 let preferences: Preferences = {
-  language: rawPreferences?.language && ['en', 'ar', 'fr', 'es'].includes(rawPreferences.language) ? rawPreferences.language : 'en',
+  language: storedLanguage ?? 'en',
   adjustment: [-1, 0, 1].includes(Number(rawPreferences?.adjustment)) ? Number(rawPreferences?.adjustment) : 0,
   weekly: rawPreferences?.weekly !== false, white: rawPreferences?.white !== false,
   quranGoal: Number.isInteger(rawPreferences?.quranGoal) && Number(rawPreferences?.quranGoal) >= 1 && Number(rawPreferences?.quranGoal) <= 1440 ? Number(rawPreferences?.quranGoal) : 15,
@@ -37,7 +44,10 @@ let selected: string | null = null;
 let activeModal: 'reminders' | 'settings' | 'record' | 'sources' | 'calendar' | 'quran-calendar' | null = null;
 const availableFeeds = new Set<string>();
 let focusBeforeModal: HTMLElement | null = null;
-const text = () => messages[preferences.language];
+let copy: Messages = en;
+let languageRequest = 0;
+let videoObserver: IntersectionObserver | null = null;
+const text = () => copy;
 const today = () => new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 12);
 const icon = (name: string, extra = '') => `<i data-lucide="${name}" ${extra} aria-hidden="true"></i>`;
 const number = (value: number) => new Intl.NumberFormat(locales[preferences.language], { useGrouping: false }).format(value);
@@ -59,6 +69,10 @@ function relativeDate(date: Date) {
   const distance = Math.round((date.getTime() - today().getTime()) / 86400000);
   return distance === 0 ? text().today : distance === 1 ? text().tomorrow : text().inDays.replace('{n}', number(distance));
 }
+function verseMarkup() {
+  const verse = verses[scene];
+  return `<p lang="ar" dir="rtl">${verse.arabic}</p><span>${text()[verse.key]}</span><small>${text().quran} ${verse.ref}</small>`;
+}
 function hero() {
   const day = upcomingDays(today(), 1, preferences.adjustment)[0];
   return `<section class="hero" aria-label="${text().landscape}">
@@ -66,10 +80,10 @@ function hero() {
     <div class="hero-inner"><div class="hero-main"><div class="eyebrow light">${icon('sprout')} ${text().tagline}</div>
     <h1>${text().greeting}<br><span>${text().greetingEnd}</span></h1><p class="hero-intro">${text().intro}</p>
     <button class="button pale" data-action="reminders">${icon('bell')}${text().addReminders}${icon('arrow-up-right')}</button>
-    <div class="verse" aria-live="off"><p lang="ar" dir="rtl">${verses[scene].arabic}</p><span>${verses[scene][preferences.language]}</span><small>${text().quran} ${verses[scene].ref}</small></div></div>
+    <div class="verse" aria-live="off">${verseMarkup()}</div></div>
     <aside class="next-fast"><div class="eyebrow">${icon('moon')} ${text().upcoming}</div><span class="next-relative">${relativeDate(day.date)}</span>
     <h2>${format(day.date, { weekday: 'long' })}</h2><p>${format(day.date, { day: 'numeric', month: 'long' })} <span> / </span> ${hijriLabel(day.date, { day: 'numeric', month: 'long' })}</p>
-    <div class="hero-badges">${badges(day)}</div><div class="hadith"><span class="quote-mark">“</span><p>${hadith[preferences.language]}</p><a href="https://sunnah.com/muslim:1159a" target="_blank" rel="noopener noreferrer">Sahih Muslim 1159 ${icon('arrow-up-right')}</a></div>
+    <div class="hero-badges">${badges(day)}</div><div class="hadith"><span class="quote-mark">“</span><p>${text().hadith}</p><a href="https://sunnah.com/muslim:1159a" target="_blank" rel="noopener noreferrer">Sahih Muslim 1159 ${icon('arrow-up-right')}</a></div>
     <button class="hero-link" data-action="invite" data-date="${day.key}">${text().setReminder}${icon('arrow-right')}</button></aside></div>
     <div class="scene-controls"><div class="scene-dots">${verses.map((_, index) => `<button class="scene-dot ${scene === index ? 'active' : ''}" data-action="scene" data-scene="${index}" aria-label="${text().changeScene} ${index + 1}" aria-pressed="${scene === index}"></button>`).join('')}</div><button class="scene-label" data-action="scene" data-scene="${(scene + 1) % 3}">${icon('image')} ${text().changeScene}</button></div>
   </section>`;
@@ -96,7 +110,7 @@ function power() {
     { file: 'dates', title: text().powerHealthTitle, body: text().powerHealthText },
   ];
   return `<section class="power-section"><div class="section-heading"><div><div class="eyebrow green">${text().tagline}</div><h2>${text().power}</h2><p>${text().powerIntro}</p></div></div>
-    <div class="power-grid">${cards.map((card, index) => `<article class="power-card" style="animation-delay:${index * 130}ms"><video src="/videos/${card.file}.mp4" muted loop playsinline preload="metadata" aria-hidden="true" tabindex="-1"></video><div class="power-overlay"><h3>${card.title}</h3><p>${card.body}</p></div></article>`).join('')}</div></section>`;
+    <div class="power-grid">${cards.map((card, index) => `<article class="power-card" style="animation-delay:${index * 130}ms"><video src="/videos/${card.file}.mp4" poster="/videos/${card.file}.webp" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1"></video><div class="power-overlay"><h3>${card.title}</h3><p>${card.body}</p></div></article>`).join('')}</div></section>`;
 }
 function calendarView() {
   const start = new Date(month.getFullYear(), month.getMonth(), 1, 12);
@@ -120,7 +134,7 @@ function logbookView() {
 function resourcesView() {
   const categories = { all: text().resourceAll, quran: text().quran, hadith: text().hadithCategory, learning: text().learningCategory };
   const filtered = resources.filter(resource => resourceCategory === 'all' || resource.category === resourceCategory);
-  return `<section class="page-section resources-section"><div class="section-heading"><div><div class="eyebrow green">${text().learningCategory}</div><h1>${text().resources}</h1><p>${text().resourcesIntro}</p></div><label class="resource-filter"><select id="resource-category" aria-label="${text().resourceAll}">${Object.entries(categories).map(([key, label]) => `<option value="${key}" ${resourceCategory === key ? 'selected' : ''}>${label}</option>`).join('')}</select></label></div><div class="resource-grid">${filtered.map(resource => `<article class="resource-card"><span class="resource-category">${icon(resource.category === 'quran' ? 'book-open' : resource.category === 'hadith' ? 'moon' : 'sprout')}${categories[resource.category]}</span><h2>${resource.name}</h2><p>${resource.description[preferences.language]}</p><a href="${resource.url}" target="_blank" rel="noopener noreferrer" class="resource-link">${text().visit}${icon('arrow-up-right')}<span dir="ltr">${new URL(resource.url).hostname}</span></a></article>`).join('')}</div><p class="resource-note">${icon('shield-check')}${text().resourceNote}</p></section>`;
+  return `<section class="page-section resources-section"><div class="section-heading"><div><div class="eyebrow green">${text().learningCategory}</div><h1>${text().resources}</h1><p>${text().resourcesIntro}</p></div><label class="resource-filter"><select id="resource-category" aria-label="${text().resourceAll}">${Object.entries(categories).map(([key, label]) => `<option value="${key}" ${resourceCategory === key ? 'selected' : ''}>${label}</option>`).join('')}</select></label></div><div class="resource-grid">${filtered.map(resource => `<article class="resource-card"><span class="resource-category">${icon(resource.category === 'quran' ? 'book-open' : resource.category === 'hadith' ? 'moon' : 'sprout')}${categories[resource.category]}</span><h2>${resource.name}</h2><p>${text()[resource.description]}</p><a href="${resource.url}" target="_blank" rel="noopener noreferrer" class="resource-link">${text().visit}${icon('arrow-up-right')}<span dir="ltr">${new URL(resource.url).hostname}</span></a></article>`).join('')}</div><p class="resource-note">${icon('shield-check')}${text().resourceNote}</p></section>`;
 }
 function validSession(value: unknown): value is QuranSession {
   if (!value || typeof value !== 'object') return false;
@@ -142,19 +156,36 @@ function quranView() {
     <div class="quran-layout"><section class="quran-entry"><h2>${text().saveSession}</h2><form id="quran-session"><label for="session-date">${text().sessionDate}</label><input id="session-date" name="date" type="date" min="2000-01-01" max="${dateKey(today())}" value="${dateKey(today())}" required><label for="session-kind">${text().activity}</label><select id="session-kind" name="kind"><option value="recitation">${text().recitation}</option><option value="revision">${text().revision}</option></select><div class="quran-numbers"><label>${text().minutes}<input name="minutes" type="number" inputmode="numeric" min="1" max="1440" step="1" value="15" required></label><label>${text().pages}<input name="pages" type="number" inputmode="numeric" min="0" max="604" step="1" value="1" required></label></div><button type="submit" class="button primary full">${icon('check')}${text().saveSession}</button></form><form id="quran-goal"><label for="daily-goal">${text().dailyGoal}</label><div><input id="daily-goal" name="goal" type="number" inputmode="numeric" min="1" max="1440" step="1" value="${preferences.quranGoal}" required><button type="submit" class="icon-button" title="${text().save}" aria-label="${text().save}">${icon('check')}</button></div></form></section>
     <section class="quran-history"><h2>${text().quranHistory}</h2>${entries.length ? `<div class="quran-sessions">${entries.map(session => `<div class="quran-row"><span class="icon-tile">${icon(session.kind === 'revision' ? 'moon' : 'book-open')}</span><div><strong>${text()[session.kind]}</strong><small>${format(parseDate(session.date), { day: 'numeric', month: 'short', year: 'numeric' })}</small></div><span class="quran-row-totals">${number(session.minutes)} ${text().minutes}<small>${number(session.pages)} ${text().pages}</small></span><button class="icon-button" data-action="delete-session" data-id="${session.id}" aria-label="${text().removeSession}" title="${text().removeSession}">${icon('trash-2')}</button></div>`).join('')}</div>` : `<div class="empty-state">${icon('book-open')}<h3>${text().noSessions}</h3></div>`}<p class="fine-print">${text().localQuran}</p><div class="quran-tools"><button class="text-button" data-action="backup">${icon('download')}${text().backup}</button><button class="text-button danger" data-action="reset-quran">${icon('trash-2')}${text().resetQuran}</button></div></section></div><p class="fine-print">${text().quranCalendarNote}</p></section>`;
 }
+function updateHead() {
+  const lang = preferences.language;
+  document.documentElement.lang = lang; document.documentElement.dir = languageInfo[lang].dir;
+  document.title = view === 'home' ? text().seoTitle : `${text()[view]} · Janat`;
+  document.querySelector('meta[name="description"]')?.setAttribute('content', text().seoDescription);
+  const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+  if (canonical) canonical.href = new URL(languagePath(lang), canonical.href).href;
+}
+function playVisibleVideos() {
+  videoObserver?.disconnect();
+  const videos = document.querySelectorAll<HTMLVideoElement>('.power-card video');
+  videos.forEach(video => { video.muted = true; });
+  if (!videos.length || matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return;
+  videoObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+    const video = entry.target as HTMLVideoElement;
+    if (entry.isIntersecting) void video.play().catch(() => {}); else video.pause();
+  }), { rootMargin: '120px 0px' });
+  videos.forEach(video => videoObserver!.observe(video));
+}
 function render() {
-  const lang = preferences.language; document.documentElement.lang = lang; document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-  document.title = `Janat | ${text().tagline}`;
-  app.innerHTML = `<header class="site-header"><div class="header-inner"><a class="brand" href="#" data-view="home" aria-label="Janat">${icon('leaf')}<span>janat<span class="brand-dot">.</span></span><span class="brand-ar" lang="ar">جنّات</span></a>
-    <nav aria-label="${text().home}">${(['home', 'calendar', 'logbook', 'quran', 'resources'] as View[]).map(item => `<button class="nav-link ${view === item ? 'active' : ''}" data-view="${item}" ${view === item ? 'aria-current="page"' : ''}>${text()[item]}</button>`).join('')}</nav>
-    <div class="header-actions"><label class="language-select">${icon('globe')}<select id="language" aria-label="Language / اللغة"><option value="en" ${lang === 'en' ? 'selected' : ''}>EN</option><option value="ar" ${lang === 'ar' ? 'selected' : ''}>العربية</option><option value="fr" ${lang === 'fr' ? 'selected' : ''}>FR</option><option value="es" ${lang === 'es' ? 'selected' : ''}>ES</option></select></label><button class="button primary header-reminder" data-action="reminders" aria-label="${text().reminders}" title="${text().reminders}">${icon('bell')}<span>${text().reminders}</span></button></div></div></header>
-    <main>${view === 'home' ? `<div class="date-line container"><span>${icon('sun')}${format(today(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span><span>${hijriLabel(today())}<span class="date-dot"></span>${text().hijriYear} ${number(hijriDate(today(), preferences.adjustment).year)}</span></div>${hero()}<div class="container">${stats()}${upcoming()}${power()}<section class="future-band"><div class="future-icon">${icon('book-open')}</div><div><span class="eyebrow green">${text().recitation} & ${text().revision}</span><h2>${text().quran}</h2><p>${text().quranIntro}</p><button class="text-button" data-view="quran">${text().quranHistory}${icon('arrow-right')}</button></div><span class="future-decoration" lang="ar">اقرأ</span></section></div>` : `<div class="container">${view === 'calendar' ? calendarView() : view === 'resources' ? resourcesView() : view === 'quran' ? quranView() : logbookView()}</div>`}</main>
-    <footer class="container"><span class="footer-brand">${icon('leaf')}janat.</span><span>${text().footer}</span><button class="text-button" data-action="sources">${text().source}${icon('arrow-up-right')}</button><span class="privacy-footer">${icon('shield-check')}${text().privacyTitle}</span></footer><dialog id="modal" aria-labelledby="modal-title"></dialog>`;
+  const lang = preferences.language;
+  updateHead();
+  app.innerHTML = `<a class="skip-link" href="#main" data-skip>${text().skipLink}</a><header class="site-header"><div class="header-inner"><a class="brand" href="${languagePath(lang)}" data-view="home" aria-label="Janat">${icon('leaf')}<span>janat<span class="brand-dot">.</span></span><span class="brand-ar" lang="ar">جنّات</span></a>
+    <nav aria-label="${text().mainNav}">${(['home', 'calendar', 'logbook', 'quran', 'resources'] as View[]).map(item => `<button class="nav-link ${view === item ? 'active' : ''}" data-view="${item}" ${view === item ? 'aria-current="page"' : ''}>${icon(navIcons[item])}<span>${text()[item]}</span></button>`).join('')}</nav>
+    <div class="header-actions"><label class="language-select" title="${text().languageLabel}">${icon('globe')}<span class="language-current" aria-hidden="true">${shortLanguageNames[lang] ?? lang.toUpperCase()}</span><select id="language" aria-label="${text().languageLabel}">${languages.map(code => `<option value="${code}" lang="${code}" ${code === lang ? 'selected' : ''}>${languageInfo[code].name}</option>`).join('')}</select></label><button class="button primary header-reminder" data-action="reminders" aria-label="${text().reminders}" title="${text().reminders}">${icon('bell')}<span>${text().reminders}</span></button></div></div></header>
+    <main id="main" tabindex="-1">${view === 'home' ? `<div class="date-line container"><span>${icon('sun')}${format(today(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span><span>${hijriLabel(today())}<span class="date-dot"></span>${text().hijriYear} ${number(hijriDate(today(), preferences.adjustment).year)}</span></div>${hero()}<div class="container">${stats()}${upcoming()}${power()}<section class="future-band"><div class="future-icon">${icon('book-open')}</div><div><span class="eyebrow green">${text().recitation} & ${text().revision}</span><h2>${text().quran}</h2><p>${text().quranIntro}</p><button class="text-button" data-view="quran">${text().quranHistory}${icon('arrow-right')}</button></div><span class="future-decoration" lang="ar">اقرأ</span></section>${faqSection(text())}</div>` : `<div class="container">${view === 'calendar' ? calendarView() : view === 'resources' ? resourcesView() : view === 'quran' ? quranView() : logbookView()}</div>`}</main>
+    <footer class="site-footer"><div class="container footer-main"><span class="footer-brand">${icon('leaf')}janat.</span><span>${text().footer}</span><button class="text-button" data-action="sources">${text().source}${icon('arrow-up-right')}</button><span class="privacy-footer">${icon('shield-check')}${text().privacyTitle}</span></div>
+    <div class="container footer-languages"><span class="footer-languages-title">${icon('globe')}${text().languagesTitle}</span><ul>${languages.map(code => `<li><a href="${languageLink(code)}" hreflang="${code}" lang="${code}" data-language="${code}" ${code === lang ? 'aria-current="true"' : ''}>${languageInfo[code].name}</a></li>`).join('')}</ul></div></footer><dialog id="modal" aria-labelledby="modal-title"></dialog>`;
   bind(); createIcons({ icons });
-  document.querySelectorAll<HTMLVideoElement>('.power-card video').forEach(video => {
-    video.muted = true;
-    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) void video.play().catch(() => {});
-  });
+  playVisibleVideos();
   if (!storageAvailable) toast(text().storageError);
 }
 function downloadFile(content: string, filename: string, type: string) {
@@ -252,7 +283,13 @@ function bind(root: ParentNode = app) {
     if (action === 'reset-quran' && window.confirm(text().resetQuranConfirm)) { quranSessions = []; persist('janat.quran', quranSessions); render(); }
     if (action === 'reset' && window.confirm(text().resetConfirm)) { logbook = {}; persist('janat.logbook', logbook); closeModal(); render(); }
   }));
-  root.querySelector('#language')?.addEventListener('change', event => { preferences.language = (event.target as HTMLSelectElement).value as Language; persist('janat.preferences', preferences); render(); });
+  root.querySelector('#language')?.addEventListener('change', event => { const value = (event.target as HTMLSelectElement).value; if (isLanguage(value)) void switchLanguage(value); });
+  root.querySelectorAll<HTMLAnchorElement>('a[data-language]').forEach(link => link.addEventListener('click', event => {
+    const language = link.dataset.language;
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || !isLanguage(language)) return;
+    event.preventDefault(); void switchLanguage(language).then(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  }));
+  root.querySelector('[data-skip]')?.addEventListener('click', event => { event.preventDefault(); document.querySelector<HTMLElement>('#main')?.focus(); });
   root.querySelector('#resource-category')?.addEventListener('change', event => { resourceCategory = (event.target as HTMLSelectElement).value as typeof resourceCategory; render(); });
   root.querySelector('#quran-session')?.addEventListener('submit', event => {
     event.preventDefault(); const data = new FormData(event.target as HTMLFormElement);
@@ -277,13 +314,50 @@ function bind(root: ParentNode = app) {
   });
   dialog?.addEventListener('cancel', () => { activeModal = null; });
 }
-render();
-window.addEventListener('popstate', () => { view = routeView(); render(); });
+function ensureFont(language: Language) {
+  const href = fontUrl(language);
+  if (!href || document.querySelector(`link[data-font="${language}"]`)) return;
+  const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = href; link.dataset.font = language;
+  document.head.append(link);
+}
+async function resolveLanguage(language: Language): Promise<[Language, Messages]> {
+  ensureFont(language);
+  const loaded = await loadMessages(language);
+  return loaded === en && language !== 'en' ? ['en', en] : [language, loaded];
+}
+async function switchLanguage(requested: Language, updateUrl = true) {
+  const request = ++languageRequest;
+  const [language, loaded] = await resolveLanguage(requested);
+  if (request !== languageRequest) return;
+  copy = loaded; preferences.language = language; persist('janat.preferences', preferences);
+  if (updateUrl) history.replaceState(history.state, '', `${languagePath(language)}${location.search}${location.hash}`);
+  render();
+}
+async function init() {
+  const pathLanguage = languageFromPath(location.pathname);
+  const requested = pathLanguage ?? storedLanguage ?? detectLanguage(navigator.languages?.length ? navigator.languages : [navigator.language]);
+  const [language, loaded] = await resolveLanguage(requested);
+  copy = loaded; preferences.language = language;
+  if (pathLanguage && pathLanguage !== storedLanguage) persist('janat.preferences', preferences);
+  if (languageFromPath(location.pathname) !== (language === 'en' ? undefined : language) && ['/', '/index.html', `/${requested}/`].includes(location.pathname)) {
+    history.replaceState(history.state, '', `${languagePath(language)}${location.search}${location.hash}`);
+  }
+  render();
+}
+window.addEventListener('popstate', () => {
+  view = routeView();
+  // Language switches replace history entries, so older entries can carry a stale language path.
+  if (languageFromPath(location.pathname) !== (preferences.language === 'en' ? undefined : preferences.language)) {
+    history.replaceState(history.state, '', `${languagePath(preferences.language)}${location.search}${location.hash}`);
+  }
+  render();
+});
+void init();
 window.setInterval(() => {
   if (view !== 'home' || activeModal || document.hidden || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   scene = (scene + 1) % 3;
   const image = document.querySelector('.hero-image'); if (image) image.className = `hero-image scene-${scene}`;
-  const verse = document.querySelector('.verse'); if (verse) verse.innerHTML = `<p lang="ar" dir="rtl">${verses[scene].arabic}</p><span>${verses[scene][preferences.language]}</span><small>${text().quran} ${verses[scene].ref}</small>`;
+  const verse = document.querySelector('.verse'); if (verse) verse.innerHTML = verseMarkup();
   document.querySelectorAll<HTMLButtonElement>('.scene-dot').forEach((dot, index) => { dot.classList.toggle('active', index === scene); dot.setAttribute('aria-pressed', String(index === scene)); });
   const nextScene = document.querySelector<HTMLElement>('.scene-label'); if (nextScene) nextScene.dataset.scene = String((scene + 1) % 3);
 }, 20000);

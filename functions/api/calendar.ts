@@ -1,5 +1,6 @@
 import { addDays, calendarInvite, dateKey, fastDay } from '../../src/calendar';
-import { messages, type Language } from '../../src/i18n';
+import { messages } from '../../src/locales';
+import type { Language } from '../../src/languages';
 
 export function onRequest({ request }: { request: Request }): Response {
   const headers = { 'Content-Type': 'text/plain;charset=utf-8', 'X-Content-Type-Options': 'nosniff' };

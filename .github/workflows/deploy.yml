@@ -16,7 +16,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx vitest run src/calendar.test.ts
+      - run: npm test
       - run: npm run build
       - uses: cloudflare/wrangler-action@v3
         with:

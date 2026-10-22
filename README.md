@@ -1,6 +1,6 @@
 # Janat | جنّات
 
-A lightweight, privacy-first space for fasting intentions: Mondays, Thursdays, and the Hijri white days (13, 14, 15). English, Arabic (RTL), French, and Spanish.
+A lightweight, privacy-first space for fasting intentions: Mondays, Thursdays, and the Hijri white days (13, 14, 15). Available in English, العربية (Arabic), اردو (Urdu), Bahasa Indonesia, Türkçe, বাংলা (Bengali), فارسی (Persian), Bahasa Melayu, Français, and Español.
 
 ## Run
 
@@ -19,8 +19,10 @@ Open the URL printed by Vite (normally http://localhost:5173). In GitHub Codespa
 - Deduplicated weekly and white-day schedules. Eid al-Fitr, Eid al-Adha, and the days of Tashriq are excluded.
 - A 90-day calendar invitation download with an 8-hour-ahead `VALARM`, plus individual event downloads. Choose weekly days, white days, or both.
 - Private local fasting logbook: fasted, not fasted, or not logged. Month and lifetime totals. JSON export and local deletion.
-- Rotating, locally hosted nature photography with sourced Quran excerpts and a sourced hadith reminder.
-- Responsive layouts, RTL, keyboard-accessible dialogs, and reduced-motion support.
+- Rotating, locally hosted nature photography (WebP with JPEG fallback) with sourced Quran excerpts and a sourced hadith reminder.
+- Responsive layouts with a mobile tab bar, RTL, script-appropriate fonts, a skip link, keyboard-accessible dialogs, and reduced-motion support.
+- A sourced FAQ about Sunnah fasting on the home page.
+- An installable web app manifest with home-screen icons (no offline mode yet).
 - Dark backgrounds throughout the calendar, logbook, dialogs, and resource pages.
 - A categorized, multilingual directory of Quran, hadith, and established Sunni learning sites at `/#resources`.
 - Local Quran recitation/revision sessions, minutes and pages, daily minute goals, deletion, and JSON export at `/#quran`.
@@ -28,11 +30,21 @@ Open the URL printed by Vite (normally http://localhost:5173). In GitHub Codespa
 - Google Calendar, Outlook.com, and Microsoft 365 event drafts without downloading or uploading files.
 - Read-only rolling subscriptions for Google, Outlook, Microsoft 365, and Apple Calendar, backed by a public Cloudflare Pages Function. No account access or personal activity history is shared.
 
+## Languages and search
+
+Each language has its own address: `/` for English and `/ar/`, `/ur/`, `/id/`, `/tr/`, `/bn/`, `/fa/`, `/ms/`, `/fr/`, and `/es/` for the others. Arabic, Urdu, and Persian render right-to-left. First-time visitors to `/` are taken to their browser language; a choice made in the language menu or footer is remembered, and `/` then opens that language. `/en/` always opens English. Only the active language is downloaded.
+
+`npm run build` pre-renders a static page per language (`dist/<lang>/index.html`) with a translated title and description, canonical URL, reciprocal `hreflang` alternates, Open Graph and Twitter cards, JSON-LD (`WebSite`, `WebApplication`, `FAQPage`), and readable content for crawlers and visitors without JavaScript. It also writes `dist/sitemap.xml`, which `public/robots.txt` references. The canonical domain is `SITE_URL` in `src/seo.ts`; change it when deploying elsewhere. After each domain change, submit the sitemap in Google Search Console and Bing Webmaster Tools.
+
+`public/_headers` sets security headers and long-lived caching for hashed assets on Cloudflare Pages.
+
+Translations other than English were drafted with machine assistance. Have native speakers, ideally familiar with Islamic terminology, review them before promoting a language.
+
 ## Important boundaries
 
 **Email sending is not connected.** This version does not collect email addresses or send messages. Calendar subscription links are not email subscriptions or OAuth account connections. Providers control refresh timing and notifications; updates can take over 24 hours and imported alarms may be discarded. Event drafts require the user to save the event and configure its reminder. File downloads are snapshots with stable event UIDs; deduplication varies by provider. Changing the Hijri adjustment requires replacing the subscription or importing an updated file.
 
-The logbook is stored in this browser's `localStorage`, without encryption or cross-device sync. Clearing browser data deletes it. Export before changing browsers. Exports currently serve as backups for manual recovery; there is no import interface yet. Private browsing may not retain records. Calendar exports contain the activity name and will be visible to the chosen calendar provider. The page loads fonts from Google Fonts, which receives normal network metadata; landscape photos are served locally. There are no analytics, cookies, or advertising integrations.
+The logbook is stored in this browser's `localStorage`, without encryption or cross-device sync. Clearing browser data deletes it. Export before changing browsers. Exports currently serve as backups for manual recovery; there is no import interface yet. Private browsing may not retain records. Calendar exports contain the activity name and will be visible to the chosen calendar provider. The page loads fonts from Google Fonts (plus a script-specific font for Urdu, Bengali, or Persian), which receives normal network metadata; landscape photos are served locally. There are no analytics, cookies, or advertising integrations.
 
 Hijri dates use the browser's built-in `Intl` Umm al-Qura calendar and the device's local date. Local moon sightings may differ; confirm dates with your community. The calendar is a planning aid, not a religious ruling or assessment of health, obligations, or exemptions. Ramadan obligations are outside this version's scope. Source references are available in the app. A qualified religious review is recommended before public release.
 
@@ -45,7 +57,7 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-Unit tests cover Hijri dates, scheduling overlaps, excluded dates, adjustments, and iCalendar alarms. Browser tests cover languages, RTL, responsive overflow, images, logbook persistence, invitation downloads, and calendar navigation. GitHub Actions runs both suites.
+Unit tests cover Hijri dates, scheduling overlaps, excluded dates, adjustments, iCalendar alarms, translation completeness, language routing, pre-rendered metadata, and the sitemap. Browser tests cover all ten languages, RTL, responsive overflow, language URLs and detection, the FAQ, images, logbook persistence, invitation downloads, and calendar navigation. GitHub Actions runs both suites.
 
 If browser downloads are blocked, tests can use an installed Chrome or Edge: set `PLAYWRIGHT_CHANNEL=chrome` or `PLAYWRIGHT_CHANNEL=msedge` in your shell before running the browser suite.
 
@@ -54,7 +66,7 @@ If browser downloads are blocked, tests can use an installed Chrome or Edge: set
 1. **Opt-in email reminders:** add a provider-neutral backend, scheduled delivery, explicit consent, verified addresses, one-click unsubscribe, rate limits, deletion/export, and timezone-aware scheduling. Accept standard relay addresses (Apple Hide My Email, Firefox Relay, SimpleLogin) without requiring a real-name identity. Never place provider keys in the client.
 2. **Calendar integrations:** extend the existing public, non-personal subscription feeds with optional OAuth-based Google Calendar / Microsoft Graph connections for per-user event writes and explicit reminder settings. Private feeds and revocation are necessary only if adding personal records.
 3. **Quran recitation and revision:** extend the local tracker with passage bookmarks, flexible reminder schedules, and optional cross-device sync.
-4. Offline support, optional encrypted backup/sync, community religious review, and verified translation review.
+4. Offline support, optional encrypted backup/sync, community religious review, and native-speaker review of every translation.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development conventions. The repository has Codespaces configuration and CI. A project license still needs to be selected by the maintainer; no license is implied by public hosting.
 
