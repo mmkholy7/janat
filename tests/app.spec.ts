@@ -1,11 +1,19 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+const languages = ['en', 'ar', 'ur', 'id', 'tr', 'bn', 'fa', 'ms', 'fr', 'es'];
+const rtl = new Set(['ar', 'ur', 'fa']);
+const fitsViewport = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+async function chooseLanguage(page: Page, language: string) {
+  await page.locator('#language').selectOption(language);
+  await expect(page.locator('html')).toHaveAttribute('lang', language);
+}
 
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-19T12:00:00') });
   await page.goto('/');
 });
 
-test('landscapes render and all four languages fit the viewport', async ({ page }, testInfo) => {
+test('landscapes render and every language fits the viewport', async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await expect(page.locator('h1')).toContainText('A little intention');
@@ -13,13 +21,12 @@ test('landscapes render and all four languages fit the viewport', async ({ page 
   await page.emulateMedia({ colorScheme: 'dark' });
   expect(await page.locator('html').evaluate(element => getComputedStyle(element).colorScheme)).toBe('dark');
   await page.emulateMedia({ colorScheme: 'light' });
-  for (const language of ['en', 'ar', 'fr', 'es']) {
-    await page.locator('#language').selectOption(language);
-    await expect(page.locator('html')).toHaveAttribute('lang', language);
-    await expect(page.locator('html')).toHaveAttribute('dir', language === 'ar' ? 'rtl' : 'ltr');
-    const overflowing = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
-    expect(overflowing).toBe(false);
+  for (const language of languages) {
+    await chooseLanguage(page, language);
+    await expect(page.locator('html')).toHaveAttribute('dir', rtl.has(language) ? 'rtl' : 'ltr');
+    expect(await fitsViewport(page), language).toBe(true);
     await expect(page.locator('h1')).toBeVisible();
+    await expect(page.locator('h1')).toHaveCount(1);
     await page.screenshot({ path: testInfo.outputPath(`${language}.png`), fullPage: true });
   }
   for (const file of ['mountains', 'forest', 'lake']) {
@@ -94,9 +101,10 @@ test('resources are categorized, translated, and directly addressable', async ({
   }
   await page.reload();
   await expect(page.locator('h1')).toHaveText('Resources');
-  for (const language of ['ar', 'fr', 'es', 'en']) {
-    await page.locator('#language').selectOption(language);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  for (const language of [...languages.slice(1), 'en']) {
+    await chooseLanguage(page, language);
+    await expect(page).toHaveURL(/#resources$/);
+    expect(await fitsViewport(page), language).toBe(true);
   }
   await page.screenshot({ path: testInfo.outputPath('resources.png'), fullPage: true });
 });
@@ -132,9 +140,9 @@ test('Quran sessions, goals, and reminders stay separate from fasting', async ({
   await page.locator('#quran-session [name="minutes"]').fill('0');
   await page.locator('#quran-session button[type="submit"]').click();
   await expect(page.locator('.quran-row')).toHaveCount(1);
-  for (const language of ['ar', 'fr', 'es', 'en']) {
-    await page.locator('#language').selectOption(language);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  for (const language of [...languages.slice(1), 'en']) {
+    await chooseLanguage(page, language);
+    expect(await fitsViewport(page), language).toBe(true);
     await expect(page.locator('.quran-row')).toHaveCount(1);
   }
   await page.screenshot({ path: testInfo.outputPath('quran.png'), fullPage: true });
@@ -170,9 +178,9 @@ test('calendar providers open drafts and subscribe without file imports', async 
   expect(response.headers()['content-type']).toContain('text/calendar');
   expect(await response.text()).toContain('BEGIN:VCALENDAR');
   await expect(page.locator('dialog [data-provider="apple"]')).toHaveAttribute('href', /^webcal:/);
-  for (const language of ['ar', 'fr', 'es', 'en']) {
+  for (const language of [...languages.slice(1), 'en']) {
     await page.keyboard.press('Escape');
-    await page.locator('#language').selectOption(language);
+    await chooseLanguage(page, language);
     await page.locator('.header-reminder').click();
     await expect(page.locator('.feed-status')).toBeEmpty({ timeout: 15000 });
     await expect(page.locator('dialog [data-provider="google"]')).toHaveAttribute('aria-disabled', 'false');
@@ -189,4 +197,68 @@ test('missing calendar feeds keep downloads usable without broken subscription l
   const download = page.waitForEvent('download');
   await page.locator('#reminder-form button[type="submit"]').click();
   expect((await download).suggestedFilename()).toBe('janat-fasting-90-days.ics');
+});
+test('each language has its own crawlable address', async ({ page }) => {
+  await page.goto('/ur/');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ur');
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  await expect(page).toHaveTitle(/سنت/);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://janat.uably.com/ur/');
+  await expect(page.locator('link[rel="alternate"][hreflang]')).toHaveCount(languages.length + 1);
+  await expect(page.locator('#language')).toHaveValue('ur');
+  await expect(page.locator('h1')).toHaveCount(1);
+  await page.locator('.footer-languages a[hreflang="tr"]').click();
+  await expect(page).toHaveURL(/\/tr\/$/);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'tr');
+  await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://janat.uably.com/tr/');
+  await expect(page.locator('.footer-languages [aria-current]')).toHaveAttribute('hreflang', 'tr');
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/tr\/$/);
+  await page.goto('/en/');
+  await expect(page).toHaveURL(/:4173\/$/);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.locator('.footer-languages a[hreflang="en"]')).toHaveAttribute('href', '/en/');
+  await page.goto('/');
+  await expect(page.locator('#language')).toHaveValue('en');
+  await expect(page).toHaveURL(/:4173\/$/);
+  await page.goto('/tr/');
+  await page.locator('nav [data-view="calendar"]').click();
+  await expect(page).toHaveURL(/\/tr\/#calendar$/);
+  await chooseLanguage(page, 'en');
+  await expect(page).toHaveURL(/:4173\/#calendar$/);
+  await expect(page).toHaveTitle('Calendar · Janat');
+  await page.locator('nav [data-view="home"]').click();
+  await expect(page).toHaveTitle(/Sunnah Fasting Calendar/);
+});
+
+test('going back keeps the language the visitor chose', async ({ page }) => {
+  await page.goto('/ur/');
+  await page.locator('nav [data-view="calendar"]').click();
+  await expect(page).toHaveURL(/\/ur\/#calendar$/);
+  await chooseLanguage(page, 'en');
+  await expect(page).toHaveURL(/:4173\/#calendar$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/:4173\/$/);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('janat.preferences') ?? '{}').language)).toBe('en');
+});
+
+test('answers common questions on the home page', async ({ page }) => {
+  const items = page.locator('.faq-item');
+  await expect(items).toHaveCount(6);
+  await items.first().locator('summary').click();
+  await expect(items.first()).toHaveAttribute('open', '');
+  await expect(items.first()).toContainText('Sahih Muslim 1159');
+  const data = JSON.parse(await page.locator('script[type="application/ld+json"]').first().textContent() ?? '{}');
+  expect(data['@graph'].map((node: { '@type': string }) => node['@type'])).toContain('FAQPage');
+});
+
+test.describe('browser language', () => {
+  test.use({ locale: 'ur-PK' });
+  test('opens in the visitor’s language on first visit', async ({ page }) => {
+    await expect(page).toHaveURL(/\/ur\/$/);
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await expect(page.locator('#language')).toHaveValue('ur');
+  });
 });
