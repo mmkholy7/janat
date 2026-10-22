@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { addDays, calendarEventLinks, calendarInvite, calendarSubscriptionLinks, dateKey, fastDay, hijriDate, upcomingDays } from './calendar';
 import { onRequest } from '../functions/api/calendar';
+import { languages } from './languages';
+import { messages } from './locales';
 
 describe('fasting calendar', () => {
   it('links providers to the full subscription URL without losing preferences', () => {
@@ -88,5 +90,13 @@ describe('fasting calendar', () => {
     expect(result).toContain('UID:quran-2026-10-20@janat.local');
     expect(result).not.toContain('UID:fast-');
     expect(result.split('\r\n').every(line => new TextEncoder().encode(line).length <= 75)).toBe(true);
+  });
+  it('serves subscription feeds in every app language and rejects unknown ones', async () => {
+    const feed = (query: string) => onRequest({ request: new Request(`https://example.com/api/calendar?${query}`) });
+    for (const language of languages) expect(feed(`activity=fast&lang=${language}`).status, language).toBe(200);
+    const urdu = (await feed('activity=quran&lang=ur').text()).replace(/\r\n /g, '');
+    expect(urdu).toContain(`X-WR-CALNAME:Janat | ${messages.ur.quranInviteTitle}`);
+    expect(feed('activity=fast&lang=de').status).toBe(400);
+    expect(feed('activity=fast&lang=toString').status).toBe(400);
   });
 });

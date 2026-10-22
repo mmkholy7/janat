@@ -11,7 +11,7 @@
 
 `GET /api/calendar` and `HEAD /api/calendar` return `text/calendar`.
 
-Parameters: `activity=fast|quran`, `lang=en|ar|fr|es`, `weekly=true|false`, `white=true|false`, and `adjustment=-1|0|1`. Unknown/duplicate parameters are rejected. Fasting subscriptions need at least one schedule selected.
+Parameters: `activity=fast|quran`, `lang=en|ar|ur|id|tr|bn|fa|ms|fr|es`, `weekly=true|false`, `white=true|false`, and `adjustment=-1|0|1`. Unknown/duplicate parameters are rejected. Fasting subscriptions need at least one schedule selected.
 
 Example:
 
