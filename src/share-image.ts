@@ -9,12 +9,17 @@ const MUTED = '#b7c0d8';
 const ARABIC = "'Noto Naskh Arabic', serif";
 const LATIN_DISPLAY = "'Fraunces', Georgia, serif";
 
+export type ShareImageFast = 'weekly' | 'white' | 'both';
 export type ShareImageTag = { kind: 'weekly' | 'white'; label: string };
-export type ShareImageDay = { weekday: string; day: string; month: string; detail: string; tags: ShareImageTag[]; highlight?: boolean };
+/** One date in the week strip or month grid. */
+export type ShareImageCell = { day: string; hijri: string; weekday?: string; month?: string; fast?: ShareImageFast; past?: boolean; today?: boolean };
+export type ShareImageLegend = { weekly: string; white: string };
 type Common = { dir: 'ltr' | 'rtl'; italic: boolean; body: string; display: string; site: string; invite: string };
 export type ShareImageQuote = { arabic: string; meaning?: string; reference: string };
 export type ShareImageInput = Common & (
-  | { kind: 'days'; heading: string; days: ShareImageDay[]; hadith?: ShareImageQuote }
+  | { kind: 'day'; heading: string; weekday: string; day: string; month: string; detail: string; tags: ShareImageTag[]; fast: ShareImageFast; hadith?: ShareImageQuote }
+  | { kind: 'week'; heading: string; subheading: string; cells: ShareImageCell[]; legend: ShareImageLegend; hadith?: ShareImageQuote }
+  | { kind: 'month'; heading: string; subheading: string; weekdays: string[]; cells: (ShareImageCell | null)[]; legend: ShareImageLegend; hadith?: ShareImageQuote }
   | ({ kind: 'hadith'; title: string } & ShareImageQuote)
 );
 type Ctx = CanvasRenderingContext2D;
@@ -189,77 +194,211 @@ function drawQuote(ctx: Ctx, input: Common, quote: ShareImageQuote, layout: Quot
   ctx.textBaseline = 'alphabetic';
 }
 
-function daysLayout(ctx: Ctx, input: Extract<ShareImageInput, { kind: 'days' }>) {
-  const rtl = input.dir === 'rtl';
-  const start = rtl ? W - PAD : PAD;
-  ctx.direction = input.dir; ctx.textAlign = rtl ? 'right' : 'left'; ctx.textBaseline = 'alphabetic';
-  let size = input.hadith ? 66 : 76, lines: string[];
-  for (;;) { ctx.font = `600 ${size}px ${input.display}`; lines = wrap(ctx, input.heading, W - PAD * 2 - 20); if (lines.length <= 2 || size <= 46) break; size -= 4; }
-  const lineHeight = size * (rtl ? 1.45 : 1.16);
-  let y = 300 + size * .2;
-  ctx.fillStyle = INK; lines.forEach(line => { ctx.fillText(line, start, y); y += lineHeight; });
-  y = y - lineHeight + 40;
-  ctx.fillStyle = GOLD; ctx.fillRect(rtl ? start - 110 : start, y, 110, 4);
+const BOTTOM = H - 212;
+type Glyph = 'weekly' | 'white';
+const glyphOf = (fast: ShareImageFast): Glyph => fast === 'weekly' ? 'weekly' : 'white';
 
-  const top = y + (input.hadith ? 44 : 52), bottom = H - (input.hadith ? 212 : 228), gap = input.hadith ? 16 : 20;
-  const quoteWidth = W - PAD * 2 - 40, quoteGap = 36, rowLimit = input.hadith ? 132 : 156;
-  let days = input.days, quote: QuoteLayout | undefined;
-  if (input.hadith) {
-    // Three days when the hadith is short; two when it needs the room to stay readable.
-    for (const count of [3, 2]) {
-      days = input.days.slice(0, count);
-      quote = measureQuote(ctx, input, input.hadith, quoteWidth, bottom - top - days.length * rowLimit - (days.length - 1) * gap - quoteGap);
-      if (quote.scale >= .8) break;
-    }
+/** Gold for Monday & Thursday, moonlit silver for the white days (13–15). */
+function fastFill(ctx: Ctx, x: number, y: number, w: number, h: number, fast: ShareImageFast | Glyph) {
+  const gradient = ctx.createLinearGradient(x, y, x + w, y + h);
+  if (fast === 'weekly') { gradient.addColorStop(0, '#f3d995'); gradient.addColorStop(1, '#c99a46'); }
+  else { gradient.addColorStop(0, '#f8f9ff'); gradient.addColorStop(1, '#a7b2dc'); }
+  return gradient;
+}
+const fastShadow = (fast: ShareImageFast) => fast === 'weekly' ? 'rgba(226,189,110,.45)' : 'rgba(196,207,248,.42)';
+
+function moonGlyph(ctx: Ctx, x: number, y: number, r: number, color: string) {
+  const size = Math.ceil(r * 2 + 4), center = size / 2;
+  const layer = document.createElement('canvas'); layer.width = layer.height = size;
+  const paint = layer.getContext('2d')!;
+  paint.fillStyle = color; paint.beginPath(); paint.arc(center, center, r, 0, Math.PI * 2); paint.fill();
+  paint.globalCompositeOperation = 'destination-out';
+  paint.beginPath(); paint.arc(center + r * .5, center - r * .32, r * .8, 0, Math.PI * 2); paint.fill();
+  ctx.drawImage(layer, x - center, y - center);
+}
+
+function sunGlyph(ctx: Ctx, x: number, y: number, r: number, color: string) {
+  ctx.save(); ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.5, r * .22); ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(x, y, r * .46, 0, Math.PI * 2); ctx.fill();
+  for (let index = 0; index < 8; index++) {
+    const angle = index * Math.PI / 4;
+    ctx.beginPath(); ctx.moveTo(x + Math.cos(angle) * r * .72, y + Math.sin(angle) * r * .72); ctx.lineTo(x + Math.cos(angle) * r, y + Math.sin(angle) * r); ctx.stroke();
   }
-  const count = days.length;
-  const rowsBottom = quote ? bottom - quote.height - quoteGap : bottom;
-  const rowHeight = Math.min(rowLimit, (rowsBottom - top - gap * (count - 1)) / count);
-  const cardX = PAD, cardWidth = W - PAD * 2;
-  if (quote && input.hadith) {
-    const rowsEnd = top + count * rowHeight + (count - 1) * gap + quoteGap;
-    drawQuote(ctx, input, input.hadith, quote, rowsEnd + Math.max(0, (bottom - rowsEnd - quote.height) / 2), quoteWidth);
+  ctx.restore();
+}
+const glyph = (ctx: Ctx, kind: Glyph, x: number, y: number, r: number, color: string) => kind === 'weekly' ? sunGlyph(ctx, x, y, r, color) : moonGlyph(ctx, x, y, r, color);
+
+/** A glyph next to a label, centred on x; the glyph leads in either direction. */
+function glyphLabel(ctx: Ctx, input: Common, kind: Glyph, label: string, x: number, y: number, r: number, color: string) {
+  const rtl = input.dir === 'rtl', width = ctx.measureText(label).width, total = r * 2 + 8 + width, start = x - total / 2;
+  glyph(ctx, kind, rtl ? start + total - r : start + r, y, r, color);
+  ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, rtl ? start : start + r * 2 + 8, y + 1);
+  ctx.textBaseline = 'alphabetic';
+}
+
+/** Centred heading with an optional gold line under it; returns where the content starts. */
+function header(ctx: Ctx, input: Common, heading: string, subheading?: string) {
+  const rtl = input.dir === 'rtl', nastaliq = /nastaliq/i.test(input.display);
+  ctx.direction = input.dir; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  let size = 64, lines: string[];
+  for (;;) { ctx.font = `600 ${size}px ${input.display}`; lines = wrap(ctx, heading, W - PAD * 2 - 40); if (lines.length === 1 || size <= 48) break; size -= 4; }
+  const lineHeight = size * (nastaliq ? 1.75 : rtl ? 1.45 : 1.16);
+  let y = 296;
+  ctx.fillStyle = INK; lines.forEach((line, index) => { if (index) y += lineHeight; ctx.fillText(line, W / 2, y); });
+  if (subheading) {
+    y += nastaliq ? 66 : 56; ctx.fillStyle = GOLD;
+    fit(ctx, subheading, value => `600 ${value}px ${input.body}`, 30, W - PAD * 2 - 40);
+    ctx.fillText(subheading, W / 2, y);
   }
-  days.forEach((day, index) => {
-    const rowTop = top + index * (rowHeight + gap);
-    roundRect(ctx, cardX, rowTop, cardWidth, rowHeight, 30);
-    ctx.fillStyle = day.highlight ? 'rgba(226,189,110,.12)' : 'rgba(255,255,255,.05)'; ctx.fill();
-    ctx.strokeStyle = day.highlight ? 'rgba(226,189,110,.5)' : 'rgba(255,255,255,.12)'; ctx.lineWidth = 2; ctx.stroke();
+  return y + (nastaliq ? 58 : 48);
+}
 
-    const tile = rowHeight - 36, tileX = rtl ? cardX + cardWidth - 18 - tile : cardX + 18, tileY = rowTop + 18;
-    const gold = ctx.createLinearGradient(tileX, tileY, tileX + tile, tileY + tile);
-    gold.addColorStop(0, '#f3d995'); gold.addColorStop(1, '#c99a46');
-    roundRect(ctx, tileX, tileY, tile, tile, 24); ctx.fillStyle = gold; ctx.fill();
-    ctx.textAlign = 'center'; ctx.fillStyle = NIGHT;
-    fit(ctx, day.day, value => `650 ${value}px ${input.display}`, Math.round(tile * .46), tile - 20);
-    ctx.fillText(day.day, tileX + tile / 2, tileY + tile * .58);
-    fit(ctx, day.month, value => `700 ${value}px ${input.body}`, Math.round(tile * .16), tile - 18);
-    ctx.fillText(day.month, tileX + tile / 2, tileY + tile * .85);
+/** Draws the period block, then centres the hadith in the space left above the footer. */
+function withQuote(ctx: Ctx, input: Common, top: number, height: number, draw: (y: number) => void, hadith?: ShareImageQuote) {
+  draw(top);
+  if (!hadith) return;
+  const width = W - PAD * 2 - 40, start = top + height + 44;
+  const quote = measureQuote(ctx, input, hadith, width, BOTTOM - start);
+  drawQuote(ctx, input, hadith, quote, start + Math.max(0, (BOTTOM - start - quote.height) / 2), width);
+}
 
-    ctx.font = `600 22px ${input.body}`;
-    const pills = day.tags.map(tag => ({ ...tag, width: Math.min(300, ctx.measureText(tag.label).width + 36) }));
-    const pillsWidth = Math.max(0, ...pills.map(pill => pill.width));
-    const pillHeight = 40, pillGap = 10;
-    let pillY = rowTop + (rowHeight - (pills.length * pillHeight + (pills.length - 1) * pillGap)) / 2;
-    pills.forEach(pill => {
-      const pillX = rtl ? cardX + 24 : cardX + cardWidth - 24 - pill.width;
-      roundRect(ctx, pillX, pillY, pill.width, pillHeight, pillHeight / 2);
-      ctx.fillStyle = pill.kind === 'white' ? 'rgba(183,192,216,.16)' : 'rgba(226,189,110,.16)'; ctx.fill();
-      ctx.fillStyle = pill.kind === 'white' ? '#dfe4f3' : GOLD; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      fit(ctx, pill.label, value => `600 ${value}px ${input.body}`, 22, pill.width - 28);
-      ctx.fillText(pill.label, pillX + pill.width / 2, pillY + pillHeight / 2 + 1);
-      ctx.textBaseline = 'alphabetic'; pillY += pillHeight + pillGap;
-    });
-
-    const textX = rtl ? tileX - 28 : tileX + tile + 28;
-    const textWidth = cardWidth - 18 - tile - 28 - (pillsWidth ? pillsWidth + 44 : 24);
-    ctx.textAlign = rtl ? 'right' : 'left'; ctx.fillStyle = INK;
-    fit(ctx, day.weekday, value => `600 ${value}px ${input.display}`, 40, textWidth);
-    ctx.fillText(day.weekday, textX, rowTop + rowHeight * .46);
-    ctx.fillStyle = MUTED;
-    fit(ctx, day.detail, value => `500 ${value}px ${input.body}`, 26, textWidth);
-    ctx.fillText(day.detail, textX, rowTop + rowHeight * .76);
+function legend(ctx: Ctx, input: Common, labels: ShareImageLegend, y: number) {
+  const rtl = input.dir === 'rtl', swatch = 26, gap = 12, between = 44;
+  let size = 24, items: { kind: Glyph; label: string; width: number }[], total: number;
+  for (;;) {
+    ctx.font = `600 ${size}px ${input.body}`;
+    items = (['weekly', 'white'] as const).map(kind => ({ kind, label: labels[kind], width: ctx.measureText(labels[kind]).width }));
+    total = items.reduce((sum, item) => sum + swatch + gap + item.width, between);
+    if (total <= W - PAD * 2 || size <= 16) break; size -= 1;
+  }
+  let x = rtl ? W / 2 + total / 2 : W / 2 - total / 2;
+  ctx.direction = input.dir; ctx.textBaseline = 'middle';
+  items.forEach(item => {
+    const swatchX = rtl ? x - swatch : x;
+    roundRect(ctx, swatchX, y - swatch / 2, swatch, swatch, 8); ctx.fillStyle = fastFill(ctx, swatchX, y - swatch / 2, swatch, swatch, item.kind); ctx.fill();
+    ctx.fillStyle = INK; ctx.textAlign = rtl ? 'right' : 'left';
+    ctx.fillText(item.label, rtl ? swatchX - gap : swatchX + swatch + gap, y + 1);
+    x += (rtl ? -1 : 1) * (swatch + gap + item.width + between);
   });
+  ctx.textBaseline = 'alphabetic';
+}
+
+function tile(ctx: Ctx, cell: ShareImageCell, x: number, y: number, w: number, h: number, radius: number) {
+  roundRect(ctx, x, y, w, h, radius);
+  if (cell.fast) {
+    ctx.save(); ctx.shadowColor = fastShadow(cell.fast); ctx.shadowBlur = 24;
+    ctx.fillStyle = fastFill(ctx, x, y, w, h, cell.fast); ctx.fill(); ctx.restore();
+    if (cell.fast === 'both') { roundRect(ctx, x + 2.5, y + 2.5, w - 5, h - 5, radius - 2.5); ctx.strokeStyle = '#c99a46'; ctx.lineWidth = 5; ctx.stroke(); }
+  } else {
+    ctx.fillStyle = 'rgba(255,255,255,.05)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.13)'; ctx.lineWidth = 2; ctx.stroke();
+  }
+}
+
+function todayRing(ctx: Ctx, x: number, y: number, w: number, h: number, radius: number) {
+  roundRect(ctx, x - 6, y - 6, w + 12, h + 12, radius + 6); ctx.strokeStyle = GOLD; ctx.lineWidth = 3; ctx.stroke();
+}
+
+function pill(ctx: Ctx, input: Common, tag: ShareImageTag, x: number, y: number, width: number, height: number) {
+  const color = tag.kind === 'white' ? '#e3e8f8' : GOLD;
+  roundRect(ctx, x, y, width, height, height / 2);
+  ctx.fillStyle = tag.kind === 'white' ? 'rgba(196,207,248,.16)' : 'rgba(226,189,110,.16)'; ctx.fill();
+  ctx.direction = input.dir;
+  fit(ctx, tag.label, value => `600 ${value}px ${input.body}`, Math.round(height * .52), width - 36 - height * .4 - 8);
+  glyphLabel(ctx, input, tag.kind, tag.label, x + width / 2, y + height / 2, height * .2, color);
+}
+
+function dayLayout(ctx: Ctx, input: Extract<ShareImageInput, { kind: 'day' }>) {
+  const rtl = input.dir === 'rtl', height = 300;
+  withQuote(ctx, input, header(ctx, input, input.heading), height, y => {
+    const cardX = PAD, cardWidth = W - PAD * 2;
+    roundRect(ctx, cardX, y, cardWidth, height, 38);
+    ctx.fillStyle = 'rgba(255,255,255,.06)'; ctx.fill();
+    ctx.strokeStyle = input.fast === 'weekly' ? 'rgba(226,189,110,.55)' : 'rgba(214,221,248,.5)'; ctx.lineWidth = 2; ctx.stroke();
+
+    const size = height - 52, tileX = rtl ? cardX + cardWidth - 26 - size : cardX + 26, tileY = y + 26;
+    tile(ctx, { day: input.day, hijri: '', fast: input.fast }, tileX, tileY, size, size, 32);
+    ctx.direction = input.dir; ctx.textAlign = 'center'; ctx.fillStyle = NIGHT;
+    glyph(ctx, glyphOf(input.fast), tileX + size / 2, tileY + 40, 15, 'rgba(11,20,48,.62)');
+    fit(ctx, input.day, value => `650 ${value}px ${input.display}`, Math.round(size * .44), size - 30);
+    ctx.fillText(input.day, tileX + size / 2, tileY + size * .63);
+    fit(ctx, input.month, value => `700 ${value}px ${input.body}`, Math.round(size * .12), size - 36);
+    ctx.fillText(input.month, tileX + size / 2, tileY + size * .86);
+
+    const textX = rtl ? tileX - 40 : tileX + size + 40, textWidth = cardWidth - 26 - size - 40 - 36;
+    ctx.textAlign = rtl ? 'right' : 'left'; ctx.fillStyle = INK;
+    fit(ctx, input.weekday, value => `600 ${value}px ${input.display}`, 66, textWidth);
+    const weekdayDrop = ctx.measureText(input.weekday).actualBoundingBoxDescent, weekdayY = y + 110 - Math.max(0, weekdayDrop - 14) / 2;
+    ctx.fillText(input.weekday, textX, weekdayY);
+    ctx.fillStyle = MUTED;
+    fit(ctx, input.detail, value => `500 ${value}px ${input.body}`, 32, textWidth);
+    // Nastaliq weekdays descend far below the baseline, so keep the Hijri line clear of them.
+    ctx.fillText(input.detail, textX, Math.max(y + 164, weekdayY + weekdayDrop + 12 + ctx.measureText(input.detail).actualBoundingBoxAscent));
+
+    const pillHeight = 50, pillGap = 12, limit = (textWidth - pillGap * (input.tags.length - 1)) / input.tags.length;
+    ctx.font = `600 26px ${input.body}`;
+    let pillX = textX;
+    input.tags.forEach(tag => {
+      const width = Math.min(limit, ctx.measureText(tag.label).width + pillHeight * .4 + 8 + 40);
+      pill(ctx, input, tag, rtl ? pillX - width : pillX, y + 204, width, pillHeight);
+      pillX += (rtl ? -1 : 1) * (width + pillGap);
+      ctx.font = `600 26px ${input.body}`;
+    });
+  }, input.hadith);
+}
+
+function weekLayout(ctx: Ctx, input: Extract<ShareImageInput, { kind: 'week' }>) {
+  const rtl = input.dir === 'rtl', gap = 12, width = (W - PAD * 2 - gap * 6) / 7, height = 222;
+  withQuote(ctx, input, header(ctx, input, input.heading, input.subheading), height + 70, y => {
+    input.cells.forEach((cell, index) => {
+      const x = rtl ? W - PAD - (index + 1) * width - index * gap : PAD + index * (width + gap), center = x + width / 2;
+      ctx.save(); if (cell.past) ctx.globalAlpha = .4;
+      tile(ctx, cell, x, y, width, height, 24);
+      const ink = cell.fast ? NIGHT : INK, soft = cell.fast ? 'rgba(11,20,48,.66)' : MUTED;
+      ctx.direction = input.dir; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = soft; fit(ctx, cell.weekday ?? '', value => `700 ${value}px ${input.body}`, 22, width - 16);
+      ctx.fillText(cell.weekday ?? '', center, y + 42);
+      ctx.fillStyle = ink; fit(ctx, cell.day, value => `650 ${value}px ${input.display}`, 56, width - 16);
+      ctx.fillText(cell.day, center, y + 112);
+      ctx.fillStyle = soft; fit(ctx, cell.month ?? '', value => `600 ${value}px ${input.body}`, 21, width - 16);
+      ctx.fillText(cell.month ?? '', center, y + 144);
+      ctx.fillStyle = cell.fast ? 'rgba(11,20,48,.16)' : 'rgba(255,255,255,.12)'; ctx.fillRect(x + 18, y + 166, width - 36, 2);
+      ctx.font = `700 22px ${input.body}`;
+      if (cell.fast) glyphLabel(ctx, input, glyphOf(cell.fast), cell.hijri, center, y + 194, 9, soft);
+      else { ctx.fillStyle = MUTED; ctx.textBaseline = 'middle'; ctx.fillText(cell.hijri, center, y + 195); ctx.textBaseline = 'alphabetic'; }
+      ctx.restore();
+      if (cell.today) todayRing(ctx, x, y, width, height, 24);
+    });
+    legend(ctx, input, input.legend, y + height + 46);
+  }, input.hadith);
+}
+
+function monthLayout(ctx: Ctx, input: Extract<ShareImageInput, { kind: 'month' }>) {
+  const rtl = input.dir === 'rtl', rows = Math.ceil(input.cells.length / 7), gap = 8, head = 34;
+  const width = (W - PAD * 2 - gap * 6) / 7, height = rows > 5 ? 54 : 60, grid = head + rows * height + (rows - 1) * gap;
+  const column = (index: number) => rtl ? W - PAD - (index + 1) * width - index * gap : PAD + index * (width + gap);
+  withQuote(ctx, input, header(ctx, input, input.heading, input.subheading), grid + 62, y => {
+    ctx.direction = input.dir; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = MUTED;
+    input.weekdays.forEach((label, index) => {
+      fit(ctx, label, value => `700 ${value}px ${input.body}`, 20, width - 8);
+      ctx.fillText(label, column(index) + width / 2, y + 20);
+    });
+    input.cells.forEach((cell, index) => {
+      if (!cell) return;
+      const x = column(index % 7), top = y + head + Math.floor(index / 7) * (height + gap);
+      ctx.save(); if (cell.past) ctx.globalAlpha = .38;
+      tile(ctx, cell, x, top, width, height, 14);
+      ctx.direction = input.dir; ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = rtl ? 'right' : 'left'; ctx.fillStyle = cell.fast ? NIGHT : INK; ctx.font = `650 26px ${input.display}`;
+      ctx.fillText(cell.day, rtl ? x + width - 12 : x + 12, top + 31);
+      ctx.textAlign = rtl ? 'left' : 'right'; ctx.fillStyle = cell.fast ? 'rgba(11,20,48,.62)' : MUTED; ctx.font = `600 17px ${input.body}`;
+      ctx.fillText(cell.hijri, rtl ? x + 10 : x + width - 10, top + height - 10);
+      if (cell.fast) glyph(ctx, glyphOf(cell.fast), rtl ? x + width - 19 : x + 19, top + height - 15, 7, 'rgba(11,20,48,.6)');
+      ctx.restore();
+      if (cell.today) todayRing(ctx, x, top, width, height, 14);
+    });
+    legend(ctx, input, input.legend, y + grid + 40);
+  }, input.hadith);
 }
 
 function hadithLayout(ctx: Ctx, input: Extract<ShareImageInput, { kind: 'hadith' }>) {
@@ -298,6 +437,8 @@ function hadithLayout(ctx: Ctx, input: Extract<ShareImageInput, { kind: 'hadith'
   ctx.textBaseline = 'alphabetic';
 }
 
+const strings = (value: unknown): string[] => typeof value === 'string' ? [value] : value && typeof value === 'object' ? Object.values(value).flatMap(strings) : [];
+
 async function loadFonts(fonts: [string, string][]) {
   if (!document.fonts?.load) return;
   const timeout = new Promise(resolve => setTimeout(resolve, 2500));
@@ -305,9 +446,7 @@ async function loadFonts(fonts: [string, string][]) {
 }
 
 export async function renderShareImage(input: ShareImageInput): Promise<Blob> {
-  const sample = input.kind === 'days'
-    ? [input.heading, input.invite, ...input.days.flatMap(day => [day.weekday, day.day, day.month, day.detail, ...day.tags.map(tag => tag.label)]), input.hadith?.meaning ?? '', input.hadith?.reference ?? ''].join(' ')
-    : [input.title, input.invite, input.meaning ?? '', input.reference].join(' ');
+  const sample = strings(input).join(' ');
   const quote = input.kind === 'hadith' ? input : input.hadith;
   await loadFonts([
     [`650 60px ${LATIN_DISPLAY}`, `janat.${input.site}`],
@@ -315,6 +454,7 @@ export async function renderShareImage(input: ShareImageInput): Promise<Blob> {
     [`400 34px ${ARABIC}`, SALAWAT],
     [`600 40px ${input.display}`, sample],
     [`500 26px ${input.body}`, sample],
+    [`700 22px ${input.body}`, sample],
     ...(quote?.meaning && input.italic ? [[`italic 400 34px ${input.display}`, sample] as [string, string]] : []),
   ]);
   const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
@@ -323,7 +463,10 @@ export async function renderShareImage(input: ShareImageInput): Promise<Blob> {
   const rtl = input.dir === 'rtl';
   backdrop(ctx, rtl);
   brand(ctx, rtl);
-  if (input.kind === 'days') daysLayout(ctx, input); else hadithLayout(ctx, input);
+  if (input.kind === 'day') dayLayout(ctx, input);
+  else if (input.kind === 'week') weekLayout(ctx, input);
+  else if (input.kind === 'month') monthLayout(ctx, input);
+  else hadithLayout(ctx, input);
   footer(ctx, input);
   return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Image export failed')), 'image/jpeg', .9));
 }

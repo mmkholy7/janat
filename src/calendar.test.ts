@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, calendarEventLinks, calendarInvite, calendarSubscriptionLinks, dateKey, fastDay, hijriDate, upcomingDays } from './calendar';
+import { addDays, calendarEventLinks, calendarInvite, calendarSubscriptionLinks, dateKey, fastDay, fastDaysBetween, hijriDate, upcomingDays } from './calendar';
 import { onRequest } from '../functions/api/calendar';
 import { languages } from './languages';
 import { messages } from './locales';
@@ -74,6 +74,14 @@ describe('fasting calendar', () => {
       if ((hijri.month === 10 && hijri.day === 1) || (hijri.month === 12 && hijri.day >= 10 && hijri.day <= 13)) expect(fastDay(date)).toBeNull();
       else if (hijri.day >= 13 && hijri.day <= 15) expect(fastDay(date)?.reasons).toContain('white');
     }
+  });
+  it('lists every fast day in a period, including both ends', () => {
+    const week = fastDaysBetween(new Date(2026, 9, 19, 12), new Date(2026, 9, 25, 12));
+    expect(week.map(day => day.key)).toEqual(['2026-10-19', '2026-10-22', '2026-10-24', '2026-10-25']);
+    expect(week.slice(2).every(day => day.reasons.includes('white'))).toBe(true);
+    const month = fastDaysBetween(new Date(2026, 9, 1, 12), new Date(2026, 9, 31, 12));
+    expect(month).toEqual(upcomingDays(new Date(2026, 9, 1, 12), month.length));
+    expect(month.at(-1)!.key <= '2026-10-31' && upcomingDays(new Date(2026, 9, 1, 12), month.length + 1).at(-1)!.key > '2026-10-31').toBe(true);
   });
   it('applies local date adjustments and exports reminders 8 hours ahead', () => {
     const date = new Date(2026, 9, 19, 12);

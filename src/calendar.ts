@@ -37,6 +37,16 @@ export function upcomingDays(start: Date, count = 6, adjustment = 0): FastDay[] 
   return result;
 }
 
+/** Fast days from `start` to `end`, both inclusive. */
+export function fastDaysBetween(start: Date, end: Date, adjustment = 0): FastDay[] {
+  const result: FastDay[] = [];
+  for (let date = addDays(start, 0); dateKey(date) <= dateKey(end); date = addDays(date, 1)) {
+    const day = fastDay(date, adjustment);
+    if (day) result.push(day);
+  }
+  return result;
+}
+
 export function calendarEventLinks(date: Date, title: string, description: string) {
   const start = dateKey(date);
   const end = dateKey(addDays(date, 1));

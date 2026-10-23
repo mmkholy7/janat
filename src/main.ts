@@ -1,5 +1,5 @@
 import { createIcons, MoonStar, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown, Gem, HandHeart, Shuffle, Cookie } from 'lucide';
-import { addDays, calendarEventLinks, calendarInvite, calendarSubscriptionLinks, dateKey, fastDay, hijriDate, upcomingDays, type FastDay, type FastStatus } from './calendar';
+import { addDays, calendarEventLinks, calendarInvite, calendarSubscriptionLinks, dateKey, fastDay, fastDaysBetween, hijriDate, upcomingDays, type FastDay, type FastStatus } from './calendar';
 import { loadMessages, locales, verses, type Messages } from './i18n';
 import { detectLanguage, fontUrl, isLanguage, languageFromPath, languageInfo, languageLink, languagePath, languages, SITE_URL, type Language } from './languages';
 import en from './locales/en';
@@ -8,7 +8,7 @@ import { resources, type ResourceCategory } from './resources';
 import { collectionKeys, gradeKeys, hadithUrl, hadiths, type Hadith } from './hadith';
 import { composeDaysText, composeHadithText, shareLinks, shareNetworks, type ShareMessage, type ShareNetwork, type SharedHadith } from './share';
 import { brandIcon, brands } from './brands';
-import { renderShareImage, type ShareImageInput } from './share-image';
+import { renderShareImage, type ShareImageCell, type ShareImageFast, type ShareImageInput } from './share-image';
 import { applyConsent, saveConsent, storedConsent, type Consent } from './consent';
 import './theme.css';
 
@@ -58,7 +58,10 @@ let hadithTimer = 0;
 let hadithStartedAt = 0;
 let hadithRemaining = HADITH_MS;
 let hadithObserver: IntersectionObserver | null = null;
-let shareSubject: { kind: 'days'; hadith: number } | { kind: 'hadith'; index: number } = { kind: 'days', hadith: 0 };
+type SharePeriod = 'day' | 'week' | 'month';
+type DaysSubject = { kind: 'days'; period: SharePeriod; anchor: string; hadith: number };
+const sharePeriods: SharePeriod[] = ['day', 'week', 'month'];
+let shareSubject: DaysSubject | { kind: 'hadith'; index: number } = { kind: 'days', period: 'week', anchor: '', hadith: 0 };
 let shareBlob: Blob | null = null;
 let shareImageUrl = '';
 let shareRequest = 0;
@@ -106,7 +109,7 @@ function hero() {
     <aside class="next-fast"><div class="eyebrow">${icon('moon')} ${text().upcoming}</div><span class="next-relative">${relativeDate(day.date)}</span>
     <h2>${format(day.date, { weekday: 'long' })}</h2><p>${format(day.date, { day: 'numeric', month: 'long' })} <span> / </span> ${hijriLabel(day.date, { day: 'numeric', month: 'long' })}</p>
     <div class="hero-badges">${badges(day)}</div>
-    <div class="next-actions"><button class="hero-link" data-action="invite" data-date="${day.key}">${text().setReminder}${icon('arrow-right')}</button><button class="button small hero-share" data-action="share-days">${icon('share-2')}${text().share}</button></div></aside></div>
+    <div class="next-actions"><button class="hero-link" data-action="invite" data-date="${day.key}">${text().setReminder}${icon('arrow-right')}</button><button class="button small hero-share" data-action="share-day" data-date="${day.key}">${icon('share-2')}${text().share}</button></div></aside></div>
     <div class="scene-controls"><div class="scene-dots">${verses.map((_, index) => `<button class="scene-dot ${scene === index ? 'active' : ''}" data-action="scene" data-scene="${index}" aria-label="${text().changeScene} ${index + 1}" aria-pressed="${scene === index}"></button>`).join('')}</div><button class="scene-label" data-action="scene" data-scene="${(scene + 1) % 3}">${icon('image')} ${text().changeScene}</button></div>
   </section>`;
 }
@@ -123,7 +126,7 @@ function stats() {
 function upcoming() {
   const days = upcomingDays(today(), 4, preferences.adjustment);
   return `<section class="upcoming-section"><div class="section-heading"><div><div class="eyebrow green">${text().intentions}</div><h2>${text().nextDays}</h2><p>${text().upcomingText}</p></div><div class="section-actions"><button class="button outline small" data-action="share-days">${icon('share-2')}${text().shareDays}</button><button class="text-button" data-view="calendar">${text().viewCalendar}${icon('arrow-right')}</button></div></div>
-    <div class="day-cards">${days.map((day, index) => `<article class="day-card ${index === 0 ? 'nearest' : ''}"><div class="day-top"><span>${format(day.date, { weekday: 'long' })}</span><span class="day-relative">${relativeDate(day.date)}</span></div><div class="day-date">${number(day.date.getDate())}<span>${format(day.date, { month: 'long' })}<small>${hijriLabel(day.date, { day: 'numeric', month: 'long' })}</small></span></div><div class="day-tags">${badges(day)}</div><button class="card-action" data-action="${day.key <= dateKey(today()) ? 'record' : 'invite'}" data-date="${day.key}">${day.key <= dateKey(today()) ? (logbook[day.key] ? text()[logbook[day.key]] : text().record) : text().setReminder}${icon(day.key <= dateKey(today()) ? 'check' : 'arrow-up-right')}</button></article>`).join('')}</div></section>`;
+    <div class="day-cards">${days.map((day, index) => `<article class="day-card ${index === 0 ? 'nearest' : ''} ${day.reasons.includes('white') ? 'white-day' : ''}"><div class="day-top"><span>${format(day.date, { weekday: 'long' })}</span><span class="day-relative">${relativeDate(day.date)}</span></div><div class="day-date">${number(day.date.getDate())}<span>${format(day.date, { month: 'long' })}<small>${hijriLabel(day.date, { day: 'numeric', month: 'long' })}</small></span></div><div class="day-tags">${badges(day)}</div><button class="card-action" data-action="${day.key <= dateKey(today()) ? 'record' : 'invite'}" data-date="${day.key}">${day.key <= dateKey(today()) ? (logbook[day.key] ? text()[logbook[day.key]] : text().record) : text().setReminder}${icon(day.key <= dateKey(today()) ? 'check' : 'arrow-up-right')}</button></article>`).join('')}</div></section>`;
 }
 function power() {
   const cards = [
@@ -213,7 +216,6 @@ const networkColors: Record<ShareNetwork, string> = { whatsapp: brands.whatsapp.
 const networkIcon = (network: ShareNetwork) => network === 'linkedin' ? icon('linkedin') : network === 'email' ? icon('mail') : brandIcon(network);
 const attribute = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 const shareUrl = () => `${SITE_URL}${languagePath(preferences.language)}`;
-const shareDays = () => upcomingDays(today(), 4, preferences.adjustment);
 const tagLabel = (reason: FastDay['reasons'][number]) => reason === 'white' ? text().white : text().weekly;
 /** Picks any hadith except the one currently shown, so "another hadith" always changes it. */
 const randomHadith = (except = -1) => {
@@ -224,10 +226,50 @@ const sharedHadith = (hadith: Hadith, separator: 'image' | 'text'): SharedHadith
   arabic: hadith.arabic, meaning: preferences.language === 'ar' ? undefined : text()[hadith.key],
   reference: separator === 'text' ? `${hadithReference(hadith)} (${text()[gradeKeys[hadith.grade]]})` : `${hadithReference(hadith)} · ${text()[gradeKeys[hadith.grade]]}`,
 });
+const SHARE_HORIZON = 366;
+const periodKeys = { day: 'periodDay', week: 'periodWeek', month: 'periodMonth' } as const;
+const monthStart = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1, 12);
+const monthEnd = (date: Date) => new Date(date.getFullYear(), date.getMonth() + 1, 0, 12);
+const later = (first: Date, second: Date) => dateKey(first) >= dateKey(second) ? first : second;
+const hijriSpan = (start: Date, end: Date) => `${hijriLabel(start, { month: 'long' })} – ${hijriLabel(end, { month: 'long', year: 'numeric' })}`;
+const weekdayLabels = () => Array.from({ length: 7 }, (_, index) => format(new Date(2026, 9, 19 + index), { weekday: 'short' }));
+const fastKind = (day: FastDay | null): ShareImageFast | undefined => !day ? undefined : day.reasons.length > 1 ? 'both' : day.reasons[0];
+const formatRange = (start: Date, end: Date, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locales[preferences.language], { calendar: 'gregory', ...options }).formatRange(start, end);
+/** Starts a days share; nothing before today, and Day snaps to the next fast day. */
+function daysSubject(period: SharePeriod, from: Date, hadith = randomHadith()): DaysSubject {
+  const start = later(from, today());
+  return { kind: 'days', period, hadith, anchor: period === 'day' ? upcomingDays(start, 1, preferences.adjustment)[0].key : dateKey(start) };
+}
+function shareRange(subject: DaysSubject) {
+  const anchor = parseDate(subject.anchor);
+  const start = subject.period === 'month' ? monthStart(anchor) : anchor;
+  const end = subject.period === 'day' ? anchor : subject.period === 'week' ? addDays(anchor, 6) : monthEnd(anchor);
+  // The image shows the whole month; the shared list only invites to days still ahead.
+  return { start, end, days: fastDaysBetween(later(start, today()), end, preferences.adjustment) };
+}
+/** The anchor one day, week or month away, or null past today or a year ahead. */
+function steppedAnchor(subject: DaysSubject, direction: 1 | -1): string | null {
+  const anchor = parseDate(subject.anchor), now = dateKey(today());
+  let next: string | undefined;
+  if (subject.period === 'day') next = direction > 0 ? upcomingDays(addDays(anchor, 1), 1, preferences.adjustment)[0]?.key : fastDaysBetween(today(), addDays(anchor, -1), preferences.adjustment).at(-1)?.key;
+  else if (subject.period === 'week') next = dateKey(later(addDays(anchor, 7 * direction), today()));
+  else next = dateKey(later(new Date(anchor.getFullYear(), anchor.getMonth() + direction, 1, 12), today()));
+  if (!next || next < now || next > dateKey(addDays(today(), SHARE_HORIZON)) || next === subject.anchor) return null;
+  return subject.period === 'month' && next.slice(0, 7) === subject.anchor.slice(0, 7) ? null : next;
+}
+function periodLabel(subject: DaysSubject, withYear = false) {
+  const { start, end } = shareRange(subject), year = withYear ? 'numeric' : undefined;
+  if (subject.period === 'day') return format(start, { weekday: 'long', day: 'numeric', month: 'long', year });
+  if (subject.period === 'week') return formatRange(start, end, { day: 'numeric', month: 'long', year });
+  return format(start, { month: 'long', year: 'numeric' });
+}
 function shareMessage(): ShareMessage {
   if (shareSubject.kind === 'hadith') return { title: text().hadithTitle, url: shareUrl(), text: composeHadithText({ ...sharedHadith(hadiths[shareSubject.index], 'text'), invite: text().shareInvite }) };
-  const days = shareDays().map(day => ({ label: format(day.date, { weekday: 'long', day: 'numeric', month: 'long' }), detail: [hijriLabel(day.date, { day: 'numeric', month: 'long' }), ...day.reasons.map(tagLabel)].join(' · ') }));
-  return { title: text().shareHeading, url: shareUrl(), text: composeDaysText({ heading: text().shareHeading, days, hadith: sharedHadith(hadiths[shareSubject.hadith], 'text'), invite: text().shareInvite }) };
+  const subject = shareSubject;
+  const days = shareRange(subject).days.map(day => ({ label: format(day.date, { weekday: 'long', day: 'numeric', month: 'long' }), detail: [hijriLabel(day.date, { day: 'numeric', month: 'long' }), ...day.reasons.map(tagLabel)].join(' · ') }));
+  const title = subject.period === 'day' ? text().shareDayHeading : subject.period === 'week' ? text().shareHeading : text().shareMonthHeading;
+  const heading = subject.period === 'day' ? title : `${title} · ${periodLabel(subject)}`;
+  return { title: heading, url: shareUrl(), text: composeDaysText({ heading, days, hadith: sharedHadith(hadiths[subject.hadith], 'text'), invite: text().shareInvite }) };
 }
 function shareImageInput(): ShareImageInput {
   const lang = preferences.language, style = getComputedStyle(document.documentElement);
@@ -237,13 +279,36 @@ function shareImageInput(): ShareImageInput {
     site: `${new URL(SITE_URL).host}${languagePath(lang).replace(/\/$/, '')}`, invite: text().shareInvite,
   };
   if (shareSubject.kind === 'hadith') return { ...common, kind: 'hadith', title: text().hadithTitle, ...sharedHadith(hadiths[shareSubject.index], 'image') };
-  return { ...common, kind: 'days', heading: text().shareHeading, hadith: sharedHadith(hadiths[shareSubject.hadith], 'image'), days: shareDays().map((day, index) => ({ weekday: format(day.date, { weekday: 'long' }), day: number(day.date.getDate()), month: format(day.date, { month: 'short' }), detail: hijriLabel(day.date), tags: day.reasons.map(reason => ({ kind: reason, label: tagLabel(reason) })), highlight: index === 0 })) };
+  const subject = shareSubject, { start, end, days } = shareRange(subject), hadith = sharedHadith(hadiths[subject.hadith], 'image');
+  const legend = { weekly: text().weekly, white: text().white }, now = dateKey(today());
+  const cell = (date: Date, extra: Partial<ShareImageCell> = {}): ShareImageCell => ({ day: number(date.getDate()), hijri: number(hijriDate(date, preferences.adjustment).day), fast: fastKind(fastDay(date, preferences.adjustment)), past: dateKey(date) < now, today: dateKey(date) === now, ...extra });
+  if (subject.period === 'week') {
+    const cells = Array.from({ length: 7 }, (_, index) => { const date = addDays(start, index); return cell(date, { weekday: format(date, { weekday: 'short' }), month: format(date, { month: 'short' }) }); });
+    return { ...common, kind: 'week', heading: text().shareHeading, subheading: periodLabel(subject, true), cells, legend, hadith };
+  }
+  if (subject.period === 'month') {
+    const cells = [...Array<null>((start.getDay() + 6) % 7).fill(null), ...Array.from({ length: end.getDate() }, (_, index) => cell(addDays(start, index)))];
+    return { ...common, kind: 'month', heading: periodLabel(subject), subheading: `${text().shareMonthHeading} · ${hijriSpan(start, end)}`, weekdays: weekdayLabels(), cells, legend, hadith };
+  }
+  const day = days[0] ?? upcomingDays(start, 1, preferences.adjustment)[0];
+  return { ...common, kind: 'day', heading: text().shareDayHeading, weekday: format(day.date, { weekday: 'long' }), day: number(day.date.getDate()), month: format(day.date, { month: 'long' }), detail: hijriLabel(day.date), tags: day.reasons.map(reason => ({ kind: reason, label: tagLabel(reason) })), fast: fastKind(day)!, hadith };
 }
-function shareFileName() { return shareSubject.kind === 'hadith' ? `janat-hadith-${hadiths[shareSubject.index].id}.jpg` : `janat-fasting-days-${dateKey(today())}.jpg`; }
+function shareFileName() {
+  if (shareSubject.kind === 'hadith') return `janat-hadith-${hadiths[shareSubject.index].id}.jpg`;
+  const start = dateKey(shareRange(shareSubject).start);
+  return shareSubject.period === 'month' ? `janat-sunnah-fasts-${start.slice(0, 7)}.jpg` : shareSubject.period === 'week' ? `janat-sunnah-fasts-week-${start}.jpg` : `janat-sunnah-fast-${start}.jpg`;
+}
+const stepButton = (subject: DaysSubject, direction: 1 | -1) => {
+  const label = direction < 0 ? text().previousPeriod : text().nextPeriod;
+  return `<button type="button" class="icon-button" data-action="share-step" data-step="${direction}" aria-label="${label}" title="${label}" ${steppedAnchor(subject, direction) ? '' : 'disabled'}>${icon(direction < 0 ? 'chevron-left' : 'chevron-right')}</button>`;
+};
+const periodControls = (subject: DaysSubject) => `<div class="share-period" role="group" aria-label="${text().sharePeriod}">${sharePeriods.map(period => `<button type="button" data-action="share-period" data-period="${period}" aria-pressed="${subject.period === period}">${text()[periodKeys[period]]}</button>`).join('')}</div>
+    <div class="share-step">${stepButton(subject, -1)}<span class="share-step-label" aria-live="polite">${periodLabel(subject)}</span>${stepButton(subject, 1)}</div>`;
 function shareContent() {
   const links = shareLinks(shareMessage());
   const isHadith = shareSubject.kind === 'hadith';
   return `<span class="modal-icon">${icon('share-2')}</span><h2 id="modal-title">${isHadith ? text().shareHadith : text().shareDays}</h2><p>${isHadith ? text().shareHadithIntro : text().shareIntro}</p>
+    ${shareSubject.kind === 'days' ? periodControls(shareSubject) : ''}
     <figure class="share-preview loading"><img alt="${text().shareImageAlt}" width="1080" height="1350" hidden></figure>
     ${isHadith ? '' : `<button class="text-button share-shuffle" data-action="shuffle-hadith">${icon('shuffle')}${text().anotherHadith}</button>`}
     <button class="button primary full share-native" data-action="native-share" ${'share' in navigator ? '' : 'hidden'}>${icon('share-2')}${text().share}</button>
@@ -282,23 +347,47 @@ async function nativeShare() {
   }
 }
 function openShare(subject: typeof shareSubject) { shareSubject = subject; openModal('share'); }
-function shuffleSharedHadith(dialog: HTMLDialogElement) {
-  if (shareSubject.kind !== 'days') return;
-  shareSubject = { kind: 'days', hadith: randomHadith(shareSubject.hadith) };
+/** Updates the open share sheet in place, so focus stays where it is. */
+function refreshShare(dialog: HTMLDialogElement) {
   const links = shareLinks(shareMessage());
   dialog.querySelectorAll<HTMLAnchorElement>('.share-link').forEach(link => { link.href = links[link.dataset.network as ShareNetwork]; });
+  if (shareSubject.kind === 'days') {
+    const subject = shareSubject;
+    dialog.querySelectorAll<HTMLElement>('[data-period]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.period === subject.period)));
+    const label = dialog.querySelector('.share-step-label'); if (label) label.textContent = periodLabel(subject);
+    dialog.querySelectorAll<HTMLButtonElement>('[data-step]').forEach(button => { button.disabled = !steppedAnchor(subject, Number(button.dataset.step) as 1 | -1); });
+  }
   void prepareShareImage(dialog);
+}
+function shuffleSharedHadith(dialog: HTMLDialogElement) {
+  if (shareSubject.kind !== 'days') return;
+  shareSubject = { ...shareSubject, hadith: randomHadith(shareSubject.hadith) };
+  refreshShare(dialog);
+}
+function setSharePeriod(dialog: HTMLDialogElement, period: SharePeriod) {
+  if (shareSubject.kind !== 'days' || shareSubject.period === period || !sharePeriods.includes(period)) return;
+  shareSubject = daysSubject(period, parseDate(shareSubject.anchor), shareSubject.hadith);
+  refreshShare(dialog);
+}
+function stepShare(dialog: HTMLDialogElement, button: HTMLButtonElement, direction: 1 | -1) {
+  if (shareSubject.kind !== 'days') return;
+  const anchor = steppedAnchor(shareSubject, direction);
+  if (!anchor) return;
+  shareSubject = { ...shareSubject, anchor };
+  refreshShare(dialog);
+  if (button.disabled) dialog.querySelector<HTMLButtonElement>(`[data-step="${-direction}"]`)?.focus();
 }
 function calendarView() {
   const start = new Date(month.getFullYear(), month.getMonth(), 1, 12);
   const shift = (start.getDay() + 6) % 7;
   const first = addDays(start, -shift);
-  const weekDays = Array.from({ length: 7 }, (_, index) => format(new Date(2026, 9, 19 + index), { weekday: 'short' }));
+  const weekDays = weekdayLabels();
   return `<section class="page-section"><div class="section-heading"><div><div class="eyebrow green">${text().hijriYear} ${number(hijriDate(month, preferences.adjustment).year)}</div><h1>${text().calendar}</h1><p>${text().selectDate}</p></div><button class="button outline" data-action="settings">${icon('settings-2')}${text().calendarSettings}</button></div>
-    <div class="month-bar"><h2>${format(month, { month: 'long', year: 'numeric' })}<span>${hijriLabel(start, { month: 'long' })} – ${hijriLabel(new Date(month.getFullYear(), month.getMonth() + 1, 0, 12), { month: 'long', year: 'numeric' })}</span></h2><div class="month-controls"><button class="icon-button" data-action="prev-month" aria-label="${text().previous}" title="${text().previous}">${icon('chevron-left')}</button><button class="text-button" data-action="today">${text().today}</button><button class="icon-button" data-action="next-month" aria-label="${text().next}" title="${text().next}">${icon('chevron-right')}</button></div></div>
+    <div class="month-bar"><h2>${format(month, { month: 'long', year: 'numeric' })}<span>${hijriSpan(start, monthEnd(month))}</span></h2><div class="month-controls"><button class="icon-button" data-action="prev-month" aria-label="${text().previous}" title="${text().previous}">${icon('chevron-left')}</button><button class="text-button" data-action="today">${text().today}</button><button class="icon-button" data-action="next-month" aria-label="${text().next}" title="${text().next}">${icon('chevron-right')}</button><button class="button primary small month-share" data-action="share-month">${icon('share-2')}${text().share}</button></div></div>
     <div class="calendar-grid">${weekDays.map(day => `<div class="weekday">${day}</div>`).join('')}${Array.from({ length: 42 }, (_, index) => {
       const date = addDays(first, index); const key = dateKey(date); const fast = fastDay(date, preferences.adjustment); const status = logbook[key];
-      return `<button class="calendar-cell ${date.getMonth() !== month.getMonth() ? 'outside' : ''} ${key === dateKey(today()) ? 'is-today' : ''} ${fast ? 'fast-day' : ''} ${status || ''}" data-action="${key <= dateKey(today()) ? 'record' : fast ? 'invite' : 'none'}" data-date="${key}" ${key > dateKey(today()) && !fast ? 'disabled' : ''} aria-label="${format(date, { dateStyle: 'full' })}, ${hijriLabel(date)}${status ? `, ${text()[status]}` : ''}"><span class="cell-date">${number(date.getDate())}<small>${number(hijriDate(date, preferences.adjustment).day)}</small></span><span class="cell-indicator">${status ? icon(status === 'fasted' ? 'check' : 'x') : fast ? icon(fast.reasons.includes('white') ? 'moon' : 'sun') : ''}<span>${status ? text()[status] : fast ? (fast.reasons.includes('white') ? text().white : format(date, { weekday: 'short' })) : ''}</span></span></button>`;
+      const white = fast?.reasons.includes('white'), indicator = fast ? `${white ? icon('moon') : ''}${fast.reasons.includes('weekly') ? icon('sun') : ''}` : '';
+      return `<button class="calendar-cell ${date.getMonth() !== month.getMonth() ? 'outside' : ''} ${key === dateKey(today()) ? 'is-today' : ''} ${fast ? 'fast-day' : ''} ${white ? 'white-day' : ''} ${status || ''}" data-action="${key <= dateKey(today()) ? 'record' : fast ? 'invite' : 'none'}" data-date="${key}" ${key > dateKey(today()) && !fast ? 'disabled' : ''} aria-label="${format(date, { dateStyle: 'full' })}, ${hijriLabel(date)}${fast ? `, ${fast.reasons.map(tagLabel).join(', ')}` : ''}${status ? `, ${text()[status]}` : ''}"><span class="cell-date">${number(date.getDate())}<small>${number(hijriDate(date, preferences.adjustment).day)}</small></span><span class="cell-indicator">${status ? icon(status === 'fasted' ? 'check' : 'x') : indicator}<span>${status ? text()[status] : fast ? (white ? text().white : format(date, { weekday: 'short' })) : ''}</span></span></button>`;
     }).join('')}</div><div class="calendar-legend"><span><b class="legend-dot weekly"></b>${text().weekly}</span><span><b class="legend-dot white"></b>${text().white}</span><span>${icon('check')}${text().fasted}</span></div><p class="muted calendar-hint">${text().adjustHint}</p></section>`;
 }
 function logbookView() {
@@ -432,11 +521,13 @@ async function updateSubscriptionChoices(dialog: HTMLDialogElement) {
 }
 function closeModal() { (document.querySelector('#modal') as HTMLDialogElement).close(); activeModal = null; focusBeforeModal?.focus(); }
 function openModal(kind: NonNullable<typeof activeModal>, date?: string) {
-  focusBeforeModal = document.activeElement as HTMLElement; activeModal = kind; if (date) selected = date;
   const dialog = document.querySelector<HTMLDialogElement>('#modal')!;
+  // Opening one sheet from another keeps the focus target from before the first.
+  if (!dialog.contains(document.activeElement)) focusBeforeModal = document.activeElement as HTMLElement;
+  activeModal = kind; if (date) selected = date;
   let content = '';
   if (kind === 'reminders') content = `<span class="modal-icon">${icon('bell')}</span><h2 id="modal-title">${text().reminderTitle}</h2><p>${text().reminderIntro}</p><form id="reminder-form"><label class="check-row">${icon('sun')}<span>${text().weekly}</span><input name="weekly" type="checkbox" ${preferences.weekly ? 'checked' : ''}></label><label class="check-row">${icon('moon')}<span>${text().white}<small>13 · 14 · 15</small></span><input name="white" type="checkbox" ${preferences.white ? 'checked' : ''}></label>${subscriptionChoices('fast')}<button class="button outline full" type="submit">${icon('download')}${text().download}</button></form><p class="fine-print">${text().calendarNote}</p><div class="privacy-note">${icon('shield-check')}<p><strong>${text().privacyTitle}</strong>${text().feedPrivacy}</p></div><p class="fine-print">${text().emailNote}</p><button class="text-button" data-action="settings">${icon('settings-2')}${text().calendarSettings}</button>`;
-  if (kind === 'calendar' && selected) content = `<span class="modal-icon">${icon('calendar-days')}</span><h2 id="modal-title">${text().calendarProvider}</h2><p>${format(parseDate(selected), { dateStyle: 'full' })} · ${hijriLabel(parseDate(selected))}</p>${providerChoices(calendarEventLinks(parseDate(selected), text().inviteTitle, text().inviteBody))}<p class="fine-print">${text().eventNote}</p><button class="button outline full" data-action="download-single" data-date="${selected}">${icon('download')}${text().download}</button>`;
+  if (kind === 'calendar' && selected) content = `<span class="modal-icon">${icon('calendar-days')}</span><h2 id="modal-title">${text().calendarProvider}</h2><p>${format(parseDate(selected), { dateStyle: 'full' })} · ${hijriLabel(parseDate(selected))}</p>${providerChoices(calendarEventLinks(parseDate(selected), text().inviteTitle, text().inviteBody))}<p class="fine-print">${text().eventNote}</p><button class="button outline full" data-action="download-single" data-date="${selected}">${icon('download')}${text().download}</button><button class="button primary full modal-share" data-action="share-day" data-date="${selected}">${icon('share-2')}${text().shareThisDay}</button>`;
   if (kind === 'quran-calendar') content = `<span class="modal-icon">${icon('book-open')}</span><h2 id="modal-title">${text().quranCalendar}</h2>${subscriptionChoices('quran')}<p class="fine-print">${text().feedPrivacy}</p><button class="button outline full" data-action="download-quran">${icon('download')}${text().download}</button><p class="fine-print">${text().quranCalendarNote}</p>`;
   if (kind === 'settings') content = `<h2 id="modal-title">${text().calendarSettings}</h2><form id="settings-form"><label class="form-label" for="adjustment">${text().adjustment}</label><select id="adjustment" name="adjustment">${[-1, 0, 1].map(value => `<option value="${value}" ${preferences.adjustment === value ? 'selected' : ''}>${value === -1 ? text().minusDay : value === 0 ? text().sameDay : text().plusDay}</option>`).join('')}</select><p class="fine-print">${text().adjustHint}</p><button class="button primary full" type="submit">${icon('check')}${text().save}</button></form><button class="text-button danger delete-button" data-action="reset">${icon('trash-2')}${text().reset}</button>`;
   if (kind === 'record' && selected) content = `<span class="modal-icon">${icon('heart')}</span><h2 id="modal-title">${text().record}</h2><p>${format(parseDate(selected), { dateStyle: 'full' })}</p><p class="hijri-record">${hijriLabel(parseDate(selected))}</p><div class="record-options"><button class="button ${logbook[selected] === 'fasted' ? 'primary' : 'outline'}" data-status="fasted">${icon('check')}${text().fasted}</button><button class="button ${logbook[selected] === 'missed' ? 'selected-missed' : 'outline'}" data-status="missed">${icon('x')}${text().missed}</button></div>${logbook[selected] ? `<button class="text-button" data-status="clear">${text().undo}</button>` : ''}`;
@@ -485,7 +576,11 @@ function bind(root: ParentNode = app) {
     if (action === 'delete-session') { quranSessions = quranSessions.filter(session => session.id !== button.dataset.id); persist('janat.quran', quranSessions); render(); toast(text().recorded); }
     if (action === 'reset-quran' && window.confirm(text().resetQuranConfirm)) { quranSessions = []; persist('janat.quran', quranSessions); render(); }
     if (action === 'reset' && window.confirm(text().resetConfirm)) { logbook = {}; persist('janat.logbook', logbook); closeModal(); render(); }
-    if (action === 'share-days') openShare({ kind: 'days', hadith: randomHadith() });
+    if (action === 'share-days') openShare(daysSubject('week', today()));
+    if (action === 'share-day') openShare(daysSubject('day', parseDate(button.dataset.date ?? dateKey(today()))));
+    if (action === 'share-month') openShare(daysSubject('month', monthStart(month)));
+    if (action === 'share-period') setSharePeriod(document.querySelector<HTMLDialogElement>('#modal')!, button.dataset.period as SharePeriod);
+    if (action === 'share-step') stepShare(document.querySelector<HTMLDialogElement>('#modal')!, button as HTMLButtonElement, Number(button.dataset.step) < 0 ? -1 : 1);
     if (action === 'shuffle-hadith') shuffleSharedHadith(document.querySelector<HTMLDialogElement>('#modal')!);
     if (action === 'share-hadith') openShare({ kind: 'hadith', index: hadithIndex });
     if (action === 'hadith-prev' || action === 'hadith-next') showHadith(hadithIndex + (action === 'hadith-next' ? 1 : -1));
