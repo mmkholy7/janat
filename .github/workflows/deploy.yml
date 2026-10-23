@@ -27,5 +27,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # The action defaults to Wrangler 3.90, which cannot read wrangler.jsonc.
+          wranglerVersion: '4.152.0'
           # janat.uably.com is served by the "janat" Worker configured in wrangler.jsonc.
           command: deploy
