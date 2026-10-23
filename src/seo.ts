@@ -1,8 +1,8 @@
 import { faqEntries, faqSection } from './faq';
-import { fontUrl, languageInfo, languageLink, languagePath, languages, type Language } from './languages';
+import { fontUrl, languageInfo, languageLink, languagePath, languages, SITE_URL, type Language } from './languages';
 import { messages } from './locales';
 
-export const SITE_URL = 'https://janat.uably.com';
+export { SITE_URL };
 export const OG_IMAGE = `${SITE_URL}/og-image.jpg`;
 
 const escapeHtml = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

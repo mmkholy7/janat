@@ -254,6 +254,62 @@ test('answers common questions on the home page', async ({ page }) => {
   expect(data['@graph'].map((node: { '@type': string }) => node['@type'])).toContain('FAQPage');
 });
 
+test('shares upcoming fasts and rotates authentic hadith', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  const banner = page.locator('.hadith-banner');
+  const source = () => banner.locator('.hadith-slide.active .hadith-source');
+  await expect(banner.locator('.hadith-slide')).toHaveCount(23);
+  await expect(banner.locator('.hadith-slide.active')).toHaveCount(1);
+  const first = await source().getAttribute('href');
+  expect(first).toMatch(/^https:\/\/sunnah\.com\/(bukhari|muslim|tirmidhi|abudawud):\d+[a-z]?$/);
+  await banner.scrollIntoViewIfNeeded();
+  await expect(banner).toHaveClass(/playing/);
+  await expect(banner).not.toHaveClass(/held/);
+  await page.clock.runFor(9500);
+  await expect(source()).not.toHaveAttribute('href', first!);
+  await banner.locator('[data-action="hadith-prev"]').click();
+  await expect(source()).toHaveAttribute('href', first!);
+  await expect(banner.locator('.hadith-count')).toContainText('of 23');
+  await expect(banner.locator('.hadith-slide:not(.active)').first()).toHaveAttribute('aria-hidden', 'true');
+  await banner.locator('[data-action="hadith-toggle"]').click();
+  await expect(banner.locator('[data-action="hadith-toggle"]')).toHaveAttribute('aria-label', 'Play');
+  await banner.locator('[data-action="hadith-next"]').click();
+  const reference = (await source().textContent())!.trim();
+
+  await banner.locator('[data-action="share-hadith"]').click();
+  const dialog = page.locator('#modal');
+  await expect(dialog).toHaveAttribute('data-kind', 'share');
+  await expect(dialog.locator('#modal-title')).toHaveText('Share this hadith');
+  expect(new URL((await dialog.locator('[data-network="telegram"]').getAttribute('href'))!).searchParams.get('text')).toContain(reference);
+  await page.keyboard.press('Escape');
+
+  await page.locator('.upcoming-section [data-action="share-days"]').click();
+  await expect(dialog.locator('#modal-title')).toHaveText('Share these days');
+  await expect(dialog.locator('.share-link')).toHaveCount(7);
+  // Image rendering waits at most 2.5s for web fonts; the fake clock has to pass that wait.
+  await page.clock.runFor(3000);
+  await expect(dialog.locator('.share-preview img')).toBeVisible();
+  await expect.poll(() => dialog.locator('.share-preview img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(1080);
+  const whatsapp = new URL((await dialog.locator('[data-network="whatsapp"]').getAttribute('href'))!);
+  expect(whatsapp.hostname).toBe('wa.me');
+  expect(whatsapp.searchParams.get('text')).toContain('Monday 19 October');
+  expect(whatsapp.searchParams.get('text')).toContain('https://janat.uably.com/');
+  expect(await fitsViewport(page)).toBe(true);
+  const download = page.waitForEvent('download');
+  await dialog.locator('[data-action="download-share-image"]').click();
+  expect((await download).suggestedFilename()).toBe('janat-fasting-days-2026-10-19.jpg');
+  await page.keyboard.press('Escape');
+
+  await chooseLanguage(page, 'ur');
+  await page.locator('.hero [data-action="share-days"]').click();
+  await page.clock.runFor(3000);
+  await expect(dialog.locator('.share-preview img')).toBeVisible();
+  expect(new URL((await dialog.locator('[data-network="whatsapp"]').getAttribute('href'))!).searchParams.get('text')).toContain('https://janat.uably.com/ur/');
+  expect(await fitsViewport(page)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test.describe('browser language', () => {
   test.use({ locale: 'ur-PK' });
   test('opens in the visitor’s language on first visit', async ({ page }) => {
