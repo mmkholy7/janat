@@ -216,6 +216,45 @@ test('every add-to-calendar offers a subscription that keeps future fasts coming
   await expect(page.locator('dialog .subscription-options [data-provider="google"]')).toHaveAttribute('href', /white%3Dtrue/, { timeout: 15000 });
 });
 
+test('shared days carry an add-to-calendar link that opens the right sheet', async ({ page }) => {
+  const dialog = page.locator('#modal');
+  const sharedText = () => dialog.locator('[data-network="whatsapp"]').evaluate(link => new URL((link as HTMLAnchorElement).href).searchParams.get('text'));
+  await page.locator('.upcoming-section [data-action="share-days"]').click();
+  await expect(dialog.locator('.share-calendar-note')).toBeVisible();
+  expect(await sharedText()).toMatch(/📅 Add these fasts to your calendar with Janat:\nhttps:\/\/janat\.uably\.com\/\?add=2026-10-19&to=2026-10-25$/);
+  const telegram = new URL((await dialog.locator('[data-network="telegram"]').getAttribute('href'))!);
+  expect(telegram.searchParams.get('url')).toBe('https://janat.uably.com/?add=2026-10-19&to=2026-10-25');
+  await dialog.locator('[data-period="day"]').click();
+  expect(await sharedText()).toMatch(/📅 Add this fast to your calendar with Janat:\nhttps:\/\/janat\.uably\.com\/\?add=2026-10-19$/);
+  await page.keyboard.press('Escape');
+
+  await page.goto('/?add=2026-10-19&to=2026-10-25');
+  await expect(dialog).toHaveAttribute('data-kind', 'add-days');
+  await expect(page).toHaveURL(/\/$/);
+  await expect(dialog.locator('.subscription-options [data-provider="google"]')).toHaveAttribute('aria-disabled', 'false', { timeout: 15000 });
+  await expect(dialog.locator('.add-day')).toHaveText([/Monday 19 October/, /Thursday 22 October/, /Saturday 24 October/, /Sunday 25 October/]);
+  await expect(dialog.locator('.add-day.white-day')).toHaveCount(2);
+  const download = page.waitForEvent('download');
+  await dialog.locator('[data-action="download-range"]').click();
+  expect((await download).suggestedFilename()).toBe('janat-fasts-2026-10-19-2026-10-25.ics');
+  await dialog.locator('.add-day', { hasText: 'Thursday 22 October' }).click();
+  await expect(dialog).toHaveAttribute('data-kind', 'calendar');
+  expect(new URL((await dialog.locator('.event-choices [data-provider="google"]').getAttribute('href'))!).searchParams.get('dates')).toBe('20261022/20261023');
+
+  await page.goto('/ur/?add=2026-10-22');
+  await expect(dialog).toHaveAttribute('data-kind', 'calendar');
+  await expect(page).toHaveURL(/\/ur\/$/);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ur');
+  expect(new URL((await dialog.locator('.event-choices [data-provider="google"]').getAttribute('href'))!).searchParams.get('dates')).toBe('20261022/20261023');
+
+  // Old links fall forward to the next fast; malformed ones are ignored.
+  await page.goto('/?add=2026-09-01');
+  expect(new URL((await dialog.locator('.event-choices [data-provider="google"]').getAttribute('href'))!).searchParams.get('dates')).toBe('20261019/20261020');
+  await page.goto('/?add=2026-02-31&to=2027-01-01');
+  await expect(page).toHaveURL(/\/$/);
+  await expect(dialog).not.toHaveAttribute('open');
+});
+
 test('missing calendar feeds keep downloads usable without broken subscription links', async ({ page }) => {
   await page.route('**/api/calendar?**', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<html>Not deployed</html>' }));
   await page.locator('.header-reminder').click();

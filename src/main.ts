@@ -46,7 +46,8 @@ let resourceCategory: 'all' | ResourceCategory = 'all';
 let month = new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12);
 let scene = 0;
 let selected: string | null = null;
-let activeModal: 'reminders' | 'settings' | 'record' | 'sources' | 'calendar' | 'quran-calendar' | 'share' | null = null;
+let activeModal: 'reminders' | 'settings' | 'record' | 'sources' | 'calendar' | 'add-days' | 'quran-calendar' | 'share' | null = null;
+let addRange = { from: '', to: '' };
 const HADITH_MS = 9000;
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Start on a different hadith each day; rotation then runs every HADITH_MS.
@@ -231,7 +232,11 @@ const periodKeys = { day: 'periodDay', week: 'periodWeek', month: 'periodMonth' 
 const monthStart = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1, 12);
 const monthEnd = (date: Date) => new Date(date.getFullYear(), date.getMonth() + 1, 0, 12);
 const later = (first: Date, second: Date) => dateKey(first) >= dateKey(second) ? first : second;
-const hijriSpan = (start: Date, end: Date) => `${hijriLabel(start, { month: 'long' })} – ${hijriLabel(end, { month: 'long', year: 'numeric' })}`;
+const hijriSpan = (start: Date, end: Date) => {
+  const first = hijriDate(start, preferences.adjustment), last = hijriDate(end, preferences.adjustment);
+  const tail = hijriLabel(end, { month: 'long', year: 'numeric' });
+  return first.month === last.month && first.year === last.year ? tail : `${hijriLabel(start, { month: 'long' })} – ${tail}`;
+};
 const weekdayLabels = () => Array.from({ length: 7 }, (_, index) => format(new Date(2026, 9, 19 + index), { weekday: 'short' }));
 const fastKind = (day: FastDay | null): ShareImageFast | undefined => !day ? undefined : day.reasons.length > 1 ? 'both' : day.reasons[0];
 const formatRange = (start: Date, end: Date, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locales[preferences.language], { calendar: 'gregory', ...options }).formatRange(start, end);
@@ -263,13 +268,21 @@ function periodLabel(subject: DaysSubject, withYear = false) {
   if (subject.period === 'week') return formatRange(start, end, { day: 'numeric', month: 'long', year });
   return format(start, { month: 'long', year: 'numeric' });
 }
+/** Recipients of a days share land on Janat's add-to-calendar sheet for those days. */
+function shareAddUrl(subject: DaysSubject) {
+  const { start, end } = shareRange(subject);
+  const params = new URLSearchParams({ add: dateKey(start) });
+  if (subject.period !== 'day') params.set('to', dateKey(end));
+  return `${shareUrl()}?${params}`;
+}
 function shareMessage(): ShareMessage {
   if (shareSubject.kind === 'hadith') return { title: text().hadithTitle, url: shareUrl(), text: composeHadithText({ ...sharedHadith(hadiths[shareSubject.index], 'text'), invite: text().shareInvite }) };
   const subject = shareSubject;
   const days = shareRange(subject).days.map(day => ({ label: format(day.date, { weekday: 'long', day: 'numeric', month: 'long' }), detail: [hijriLabel(day.date, { day: 'numeric', month: 'long' }), ...day.reasons.map(tagLabel)].join(' · ') }));
   const title = subject.period === 'day' ? text().shareDayHeading : subject.period === 'week' ? text().shareHeading : text().shareMonthHeading;
   const heading = subject.period === 'day' ? title : `${title} · ${periodLabel(subject)}`;
-  return { title: heading, url: shareUrl(), text: composeDaysText({ heading, days, hadith: sharedHadith(hadiths[subject.hadith], 'text'), invite: text().shareInvite }) };
+  const invite = `📅 ${subject.period === 'day' ? text().shareAddDay : text().shareAddDays}`;
+  return { title: heading, url: shareAddUrl(subject), text: composeDaysText({ heading, days, hadith: sharedHadith(hadiths[subject.hadith], 'text'), invite }) };
 }
 function shareImageInput(): ShareImageInput {
   const lang = preferences.language, style = getComputedStyle(document.documentElement);
@@ -310,7 +323,7 @@ function shareContent() {
   return `<span class="modal-icon">${icon('share-2')}</span><h2 id="modal-title">${isHadith ? text().shareHadith : text().shareDays}</h2><p>${isHadith ? text().shareHadithIntro : text().shareIntro}</p>
     ${shareSubject.kind === 'days' ? periodControls(shareSubject) : ''}
     <figure class="share-preview loading"><img alt="${text().shareImageAlt}" width="1080" height="1350" hidden></figure>
-    ${isHadith ? '' : `<button class="text-button share-shuffle" data-action="shuffle-hadith">${icon('shuffle')}${text().anotherHadith}</button>`}
+    ${isHadith ? '' : `<button class="text-button share-shuffle" data-action="shuffle-hadith">${icon('shuffle')}${text().anotherHadith}</button><p class="share-calendar-note">${icon('calendar-plus')}<span>${text().shareCalendarNote}</span></p>`}
     <button class="button primary full share-native" data-action="native-share" ${'share' in navigator ? '' : 'hidden'}>${icon('share-2')}${text().share}</button>
     <p class="share-via">${text().shareVia}</p>
     <div class="share-networks">${shareNetworks.map(network => `<a class="share-link" data-network="${network}" href="${attribute(links[network])}" ${network === 'email' ? '' : 'target="_blank" rel="noopener noreferrer"'}><span class="share-circle" style="--brand:${networkColors[network]}">${networkIcon(network)}</span><span>${networkLabels[network]()}</span></a>`).join('')}</div>
@@ -482,6 +495,11 @@ function exportCalendar(singleDate?: string) {
   if (!days.length) { toast(text().noSelection); return; }
   downloadFile(calendarInvite(days, text().inviteTitle, text().inviteBody), singleDate ? `janat-${singleDate}.ics` : 'janat-fasting-90-days.ics', 'text/calendar;charset=utf-8'); toast(text().downloaded);
 }
+function exportRange(from: string, to: string) {
+  const days = fastDaysBetween(later(parseDate(from), today()), parseDate(to), preferences.adjustment);
+  if (!days.length) return;
+  downloadFile(calendarInvite(days, text().inviteTitle, text().inviteBody), `janat-fasts-${from}-${to}.ics`, 'text/calendar;charset=utf-8'); toast(text().downloaded);
+}
 function subscriptionUrl(activity: 'fast' | 'quran') {
   const url = new URL('/api/calendar', location.origin);
   url.search = new URLSearchParams({ activity, lang: preferences.language, adjustment: String(preferences.adjustment), weekly: String(preferences.weekly), white: String(preferences.white) }).toString();
@@ -531,6 +549,11 @@ function openModal(kind: NonNullable<typeof activeModal>, date?: string) {
   let content = '';
   if (kind === 'reminders') content = `<span class="modal-icon">${icon('bell')}</span><h2 id="modal-title">${text().reminderTitle}</h2><p>${text().reminderIntro}</p><form id="reminder-form"><label class="check-row">${icon('sun')}<span>${text().weekly}</span><input name="weekly" type="checkbox" data-schedule ${preferences.weekly ? 'checked' : ''}></label><label class="check-row">${icon('moon')}<span>${text().white}<small>13 · 14 · 15</small></span><input name="white" type="checkbox" data-schedule ${preferences.white ? 'checked' : ''}></label>${subscriptionChoices('fast', { title: text().subscribeAll, body: text().subscribeAllBody })}<button class="button outline full" type="submit">${icon('download')}${text().download}</button></form><p class="fine-print">${text().calendarNote}</p><div class="privacy-note">${icon('shield-check')}<p><strong>${text().privacyTitle}</strong>${text().feedPrivacy}</p></div><p class="fine-print">${text().emailNote}</p><button class="text-button" data-action="settings">${icon('settings-2')}${text().calendarSettings}</button>`;
   if (kind === 'calendar' && selected) content = `<span class="modal-icon">${icon('calendar-days')}</span><h2 id="modal-title">${text().setReminder}</h2><p>${format(parseDate(selected), { dateStyle: 'full' })} · ${hijriLabel(parseDate(selected))}</p>${subscriptionChoices('fast', { title: text().subscribeAll, body: text().subscribeAllBody, chips: true })}<p class="share-via">${text().onlyThisDay}</p><div class="event-choices">${providerChoices(calendarEventLinks(parseDate(selected), text().inviteTitle, text().inviteBody))}</div><p class="fine-print">${text().eventNote}</p><button class="button outline full" data-action="download-single" data-date="${selected}">${icon('download')}${text().download}</button><button class="button primary full modal-share" data-action="share-day" data-date="${selected}">${icon('share-2')}${text().shareThisDay}</button>`;
+  if (kind === 'add-days') {
+    const start = parseDate(addRange.from), end = parseDate(addRange.to);
+    const days = fastDaysBetween(start, end, preferences.adjustment).map(day => `<li><button class="add-day${day.reasons.includes('white') ? ' white-day' : ''}" data-action="invite" data-date="${day.key}">${icon(day.reasons.includes('white') ? 'moon' : 'sun')}<span><strong>${format(day.date, { weekday: 'long', day: 'numeric', month: 'long' })}</strong><small>${[hijriLabel(day.date, { day: 'numeric', month: 'long' }), ...day.reasons.map(tagLabel)].join(' · ')}</small></span>${icon('calendar-plus')}</button></li>`).join('');
+    content = `<span class="modal-icon">${icon('calendar-plus')}</span><h2 id="modal-title">${text().setReminder}</h2><p>${formatRange(start, end, { day: 'numeric', month: 'long', year: 'numeric' })} · ${hijriSpan(start, end)}</p>${subscriptionChoices('fast', { title: text().subscribeAll, body: text().subscribeAllBody, chips: true })}<p class="share-via">${text().onlyTheseDays}</p><ul class="add-days">${days}</ul><button class="button outline full" data-action="download-range">${icon('download')}${text().download}</button>`;
+  }
   if (kind === 'quran-calendar') content = `<span class="modal-icon">${icon('book-open')}</span><h2 id="modal-title">${text().quranCalendar}</h2>${subscriptionChoices('quran')}<p class="fine-print">${text().feedPrivacy}</p><button class="button outline full" data-action="download-quran">${icon('download')}${text().download}</button><p class="fine-print">${text().quranCalendarNote}</p>`;
   if (kind === 'settings') content = `<h2 id="modal-title">${text().calendarSettings}</h2><form id="settings-form"><label class="form-label" for="adjustment">${text().adjustment}</label><select id="adjustment" name="adjustment">${[-1, 0, 1].map(value => `<option value="${value}" ${preferences.adjustment === value ? 'selected' : ''}>${value === -1 ? text().minusDay : value === 0 ? text().sameDay : text().plusDay}</option>`).join('')}</select><p class="fine-print">${text().adjustHint}</p><button class="button primary full" type="submit">${icon('check')}${text().save}</button></form><button class="text-button danger delete-button" data-action="reset">${icon('trash-2')}${text().reset}</button>`;
   if (kind === 'record' && selected) content = `<span class="modal-icon">${icon('heart')}</span><h2 id="modal-title">${text().record}</h2><p>${format(parseDate(selected), { dateStyle: 'full' })}</p><p class="hijri-record">${hijriLabel(parseDate(selected))}</p><div class="record-options"><button class="button ${logbook[selected] === 'fasted' ? 'primary' : 'outline'}" data-status="fasted">${icon('check')}${text().fasted}</button><button class="button ${logbook[selected] === 'missed' ? 'selected-missed' : 'outline'}" data-status="missed">${icon('x')}${text().missed}</button></div>${logbook[selected] ? `<button class="text-button" data-status="clear">${text().undo}</button>` : ''}`;
@@ -563,6 +586,7 @@ function bind(root: ParentNode = app) {
     if (action === 'consent-settings') { consentOpen = true; renderConsent(); document.querySelector<HTMLElement>('.consent button')?.focus(); }
     if (action === 'invite') openModal('calendar', button.dataset.date);
     if (action === 'download-single') exportCalendar(button.dataset.date);
+    if (action === 'download-range') exportRange(addRange.from, addRange.to);
     if (action === 'copy-feed') {
       const input = button.closest('.subscription-options')?.querySelector<HTMLInputElement>('.subscription-url');
       if (input) void navigator.clipboard.writeText(input.value).then(() => toast(text().calendarUrlCopied)).catch(() => { input.select(); toast(text().clipboardError); });
@@ -664,6 +688,24 @@ async function init() {
     history.replaceState(history.state, '', `${languagePath(language)}${location.search}${location.hash}`);
   }
   render();
+  openSharedDays();
+}
+const validKey = (value: string | null): value is string => !!value && /^\d{4}-\d{2}-\d{2}$/.test(value) && dateKey(parseDate(value)) === value;
+/** A shared link (?add=day or ?add=from&to=to) opens the add-to-calendar sheet, then the address is tidied. */
+function openSharedDays() {
+  const params = new URLSearchParams(location.search);
+  const from = params.get('add'), to = params.get('to');
+  if (from === null) return;
+  params.delete('add'); params.delete('to');
+  const query = params.toString();
+  history.replaceState(history.state, '', `${location.pathname}${query ? `?${query}` : ''}${location.hash}`);
+  if (!validKey(from) || (to !== null && (!validKey(to) || to < from || to > dateKey(addDays(parseDate(from), 31))))) return;
+  const now = dateKey(today());
+  if (from > dateKey(addDays(today(), SHARE_HORIZON))) return;
+  if (to !== null && to >= now && fastDaysBetween(later(parseDate(from), today()), parseDate(to), preferences.adjustment).length) {
+    addRange = { from: from < now ? now : from, to }; openModal('add-days'); return;
+  }
+  openModal('calendar', from >= now && fastDay(parseDate(from), preferences.adjustment) ? from : upcomingDays(today(), 1, preferences.adjustment)[0].key);
 }
 window.addEventListener('popstate', () => {
   view = routeView();
