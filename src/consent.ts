@@ -17,18 +17,17 @@ function gtag(..._: unknown[]) {
   (target.dataLayer ??= []).push(arguments);
 }
 
-// Google Tag Manager is only requested after the visitor accepts analytics cookies.
+// The consent default (denied until accepted) is set inline in index.html before any tag can load.
+// Google Tag Manager itself is only requested after the visitor accepts analytics cookies.
 export function applyConsent(consent: Consent | null) {
+  if (consent) gtag('consent', 'update', { analytics_storage: consent });
   if (consent === 'granted' && !tagManagerLoaded) {
     tagManagerLoaded = true;
-    gtag('consent', 'default', { analytics_storage: 'granted', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' });
     (window as DataLayerWindow).dataLayer!.push({ 'gtm.start': Date.now(), event: 'gtm.js' });
     const script = document.createElement('script');
     script.async = true;
     script.src = `https://www.googletagmanager.com/gtm.js?id=${GTM_ID}`;
     document.head.append(script);
-  } else if (tagManagerLoaded) {
-    gtag('consent', 'update', { analytics_storage: consent === 'granted' ? 'granted' : 'denied' });
   }
 }
 

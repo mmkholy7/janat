@@ -336,6 +336,7 @@ test('analytics load only after consent and the choice can be changed', async ({
   }
   await chooseLanguage(page, 'en');
   expect(tagRequests).toEqual([]);
+  expect(await page.evaluate(() => Array.from((window as unknown as { dataLayer: IArguments[] }).dataLayer[0]))).toEqual(['consent', 'default', { analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' }]);
   await banner.getByRole('button', { name: 'Accept' }).click();
   await expect(banner).toHaveCount(0);
   await expect.poll(() => tagRequests).toEqual(['https://www.googletagmanager.com/gtm.js?id=GTM-KNCXQJPL']);
