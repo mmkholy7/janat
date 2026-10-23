@@ -158,11 +158,11 @@ test('Quran sessions, goals, and reminders stay separate from fasting', async ({
 
 test('calendar providers open drafts and subscribe without file imports', async ({ page, request }, testInfo) => {
   await page.locator('.hero-link[data-action="invite"]').click();
-  const google = page.locator('dialog [data-provider="google"]');
+  const google = page.locator('dialog .event-choices [data-provider="google"]');
   await expect(google).toHaveAttribute('href', /calendar.google.com/);
   const event = new URL((await google.getAttribute('href'))!);
   expect(event.searchParams.get('dates')).toBe('20261019/20261020');
-  await expect(page.locator('dialog [data-provider="office365"]')).toHaveAttribute('href', /outlook.office.com/);
+  await expect(page.locator('dialog .event-choices [data-provider="office365"]')).toHaveAttribute('href', /outlook.office.com/);
   await page.keyboard.press('Escape');
   await page.locator('.header-reminder').click();
   await expect(page.locator('.feed-status')).toBeEmpty({ timeout: 15000 });
@@ -189,6 +189,31 @@ test('calendar providers open drafts and subscribe without file imports', async 
     expect(await page.locator('dialog').evaluate(element => element.scrollWidth > element.clientWidth)).toBe(false);
   }
   await page.screenshot({ path: testInfo.outputPath('calendar-providers.png'), fullPage: true });
+});
+
+test('every add-to-calendar offers a subscription that keeps future fasts coming', async ({ page }) => {
+  await page.locator('.day-card').nth(1).locator('[data-action="invite"]').click();
+  const card = page.locator('dialog .subscription-options');
+  await expect(card).toBeVisible();
+  await expect(card.locator('h3')).toHaveText('Subscribe to every fast');
+  const google = card.locator('[data-provider="google"]');
+  await expect(google).toHaveAttribute('aria-disabled', 'false', { timeout: 15000 });
+  expect(new URL((await google.getAttribute('href'))!).searchParams.get('cid')).toMatch(/^webcal:.*white=true/);
+  await expect(card.locator('[data-provider="apple"]')).toHaveAttribute('href', /^webcal:/);
+  await card.locator('.schedule-chip', { hasText: 'White days' }).click();
+  await expect(google).toHaveAttribute('href', /white%3Dfalse/);
+  await expect(card.locator('input[name="white"]')).not.toBeChecked();
+  await expect(page.locator('dialog .event-choices [data-provider="google"]')).toHaveAttribute('href', /calendar.google.com/);
+  await card.locator('.feed-link summary').click();
+  await expect(card.locator('.subscription-url')).toHaveValue(/white=false/);
+  await page.keyboard.press('Escape');
+  await page.locator('.header-reminder').click();
+  await expect(page.locator('#reminder-form [name="white"]')).not.toBeChecked();
+  await page.locator('#reminder-form [name="white"]').check();
+  await page.keyboard.press('Escape');
+  await page.locator('nav [data-view="calendar"]').click();
+  await page.locator('.calendar-actions [data-action="reminders"]').click();
+  await expect(page.locator('dialog .subscription-options [data-provider="google"]')).toHaveAttribute('href', /white%3Dtrue/, { timeout: 15000 });
 });
 
 test('missing calendar feeds keep downloads usable without broken subscription links', async ({ page }) => {
