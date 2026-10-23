@@ -1,19 +1,21 @@
-import { createIcons, Leaf, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library } from 'lucide';
+import { createIcons, MoonStar, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown } from 'lucide';
 import { addDays, calendarEventLinks, calendarInvite, calendarSubscriptionLinks, dateKey, fastDay, hijriDate, upcomingDays, type FastDay, type FastStatus } from './calendar';
 import { loadMessages, locales, verses, type Messages } from './i18n';
-import { detectLanguage, fontUrl, isLanguage, languageFromPath, languageInfo, languageLink, languagePath, languages, type Language } from './languages';
+import { detectLanguage, fontUrl, isLanguage, languageFromPath, languageInfo, languageLink, languagePath, languages, SITE_URL, type Language } from './languages';
 import en from './locales/en';
 import { faqSection } from './faq';
 import { resources, type ResourceCategory } from './resources';
-import './style.css';
-import './dark.css';
-import './design.css';
+import { collectionKeys, gradeKeys, hadithUrl, hadiths, type Hadith } from './hadith';
+import { composeDaysText, composeHadithText, shareLinks, shareNetworks, type ShareMessage, type ShareNetwork } from './share';
+import { brandIcon, brands } from './brands';
+import { renderShareImage, type ShareImageInput } from './share-image';
+import './theme.css';
 
 type View = 'home' | 'calendar' | 'logbook' | 'quran' | 'resources';
 type Preferences = { language: Language; adjustment: number; weekly: boolean; white: boolean; quranGoal: number };
 type QuranSession = { id: string; date: string; kind: 'recitation' | 'revision'; minutes: number; pages: number };
 const app = document.querySelector<HTMLDivElement>('#app')!;
-const icons = { Leaf, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library };
+const icons = { MoonStar, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library };
 const navIcons: Record<View, string> = { home: 'house', calendar: 'calendar-days', logbook: 'notebook-pen', quran: 'book-open', resources: 'library' };
 const shortLanguageNames: Partial<Record<Language, string>> = { ar: 'عربي', ur: 'اردو', bn: 'বাংলা', fa: 'فارسی' };
 let storageAvailable = true;
@@ -41,7 +43,22 @@ let resourceCategory: 'all' | ResourceCategory = 'all';
 let month = new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12);
 let scene = 0;
 let selected: string | null = null;
-let activeModal: 'reminders' | 'settings' | 'record' | 'sources' | 'calendar' | 'quran-calendar' | null = null;
+let activeModal: 'reminders' | 'settings' | 'record' | 'sources' | 'calendar' | 'quran-calendar' | 'share' | null = null;
+const HADITH_MS = 9000;
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Start on a different hadith each day; rotation then runs every HADITH_MS.
+let hadithIndex = Math.floor(Date.now() / 86400000) % hadiths.length;
+let hadithPaused = reducedMotion();
+let hadithHeld = false;
+let hadithVisible = false;
+let hadithTimer = 0;
+let hadithStartedAt = 0;
+let hadithRemaining = HADITH_MS;
+let hadithObserver: IntersectionObserver | null = null;
+let shareSubject: { kind: 'days' } | { kind: 'hadith'; index: number } = { kind: 'days' };
+let shareBlob: Blob | null = null;
+let shareImageUrl = '';
+let shareRequest = 0;
 const availableFeeds = new Set<string>();
 let focusBeforeModal: HTMLElement | null = null;
 let copy: Messages = en;
@@ -73,18 +90,21 @@ function verseMarkup() {
   const verse = verses[scene];
   return `<p lang="ar" dir="rtl">${verse.arabic}</p><span>${text()[verse.key]}</span><small>${text().quran} ${verse.ref}</small>`;
 }
+function dateLine() {
+  return `<div class="date-line"><span>${icon('sun')}${format(today(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span><span>${icon('moon-star')}${hijriLabel(today())}<span class="date-dot"></span>${text().hijriYear} ${number(hijriDate(today(), preferences.adjustment).year)}</span></div>`;
+}
 function hero() {
   const day = upcomingDays(today(), 1, preferences.adjustment)[0];
   return `<section class="hero" aria-label="${text().landscape}">
     <div class="hero-image scene-${scene}" role="img" aria-label="${text().landscape}"></div><div class="hero-shade"></div>
-    <div class="hero-inner"><div class="hero-main"><div class="eyebrow light">${icon('sprout')} ${text().tagline}</div>
+    <div class="hero-inner">${dateLine()}<div class="hero-main"><div class="eyebrow light">${icon('sprout')} ${text().tagline}</div>
     <h1>${text().greeting}<br><span>${text().greetingEnd}</span></h1><p class="hero-intro">${text().intro}</p>
     <button class="button pale" data-action="reminders">${icon('bell')}${text().addReminders}${icon('arrow-up-right')}</button>
     <div class="verse" aria-live="off">${verseMarkup()}</div></div>
     <aside class="next-fast"><div class="eyebrow">${icon('moon')} ${text().upcoming}</div><span class="next-relative">${relativeDate(day.date)}</span>
     <h2>${format(day.date, { weekday: 'long' })}</h2><p>${format(day.date, { day: 'numeric', month: 'long' })} <span> / </span> ${hijriLabel(day.date, { day: 'numeric', month: 'long' })}</p>
-    <div class="hero-badges">${badges(day)}</div><div class="hadith"><span class="quote-mark">“</span><p>${text().hadith}</p><a href="https://sunnah.com/muslim:1159a" target="_blank" rel="noopener noreferrer">Sahih Muslim 1159 ${icon('arrow-up-right')}</a></div>
-    <button class="hero-link" data-action="invite" data-date="${day.key}">${text().setReminder}${icon('arrow-right')}</button></aside></div>
+    <div class="hero-badges">${badges(day)}</div>
+    <div class="next-actions"><button class="hero-link" data-action="invite" data-date="${day.key}">${text().setReminder}${icon('arrow-right')}</button><button class="button small hero-share" data-action="share-days">${icon('share-2')}${text().share}</button></div></aside></div>
     <div class="scene-controls"><div class="scene-dots">${verses.map((_, index) => `<button class="scene-dot ${scene === index ? 'active' : ''}" data-action="scene" data-scene="${index}" aria-label="${text().changeScene} ${index + 1}" aria-pressed="${scene === index}"></button>`).join('')}</div><button class="scene-label" data-action="scene" data-scene="${(scene + 1) % 3}">${icon('image')} ${text().changeScene}</button></div>
   </section>`;
 }
@@ -100,7 +120,7 @@ function stats() {
 }
 function upcoming() {
   const days = upcomingDays(today(), 4, preferences.adjustment);
-  return `<section class="upcoming-section"><div class="section-heading"><div><div class="eyebrow green">${text().intentions}</div><h2>${text().nextDays}</h2><p>${text().upcomingText}</p></div><button class="text-button" data-view="calendar">${text().viewCalendar}${icon('arrow-right')}</button></div>
+  return `<section class="upcoming-section"><div class="section-heading"><div><div class="eyebrow green">${text().intentions}</div><h2>${text().nextDays}</h2><p>${text().upcomingText}</p></div><div class="section-actions"><button class="button outline small" data-action="share-days">${icon('share-2')}${text().shareDays}</button><button class="text-button" data-view="calendar">${text().viewCalendar}${icon('arrow-right')}</button></div></div>
     <div class="day-cards">${days.map((day, index) => `<article class="day-card ${index === 0 ? 'nearest' : ''}"><div class="day-top"><span>${format(day.date, { weekday: 'long' })}</span><span class="day-relative">${relativeDate(day.date)}</span></div><div class="day-date">${number(day.date.getDate())}<span>${format(day.date, { month: 'long' })}<small>${hijriLabel(day.date, { day: 'numeric', month: 'long' })}</small></span></div><div class="day-tags">${badges(day)}</div><button class="card-action" data-action="${day.key <= dateKey(today()) ? 'record' : 'invite'}" data-date="${day.key}">${day.key <= dateKey(today()) ? (logbook[day.key] ? text()[logbook[day.key]] : text().record) : text().setReminder}${icon(day.key <= dateKey(today()) ? 'check' : 'arrow-up-right')}</button></article>`).join('')}</div></section>`;
 }
 function power() {
@@ -112,6 +132,149 @@ function power() {
   return `<section class="power-section"><div class="section-heading"><div><div class="eyebrow green">${text().tagline}</div><h2>${text().power}</h2><p>${text().powerIntro}</p></div></div>
     <div class="power-grid">${cards.map((card, index) => `<article class="power-card" style="animation-delay:${index * 130}ms"><video src="/videos/${card.file}.mp4" poster="/videos/${card.file}.webp" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1"></video><div class="power-overlay"><h3>${card.title}</h3><p>${card.body}</p></div></article>`).join('')}</div></section>`;
 }
+function hadithReference(hadith: Hadith) { return `${text()[collectionKeys[hadith.collection]]} ${hadith.number}`; }
+function hadithCount(index: number) { return text().hadithCount.replace('{n}', number(index + 1)).replace('{total}', number(hadiths.length)); }
+function hadithBanner() {
+  const showMeaning = preferences.language !== 'ar';
+  return `<section class="hadith-banner ${hadithPaused ? '' : 'playing'}" aria-roledescription="carousel" aria-labelledby="hadith-title" style="--hadith-duration:${HADITH_MS}ms">
+    <div class="hadith-head"><div><h2 id="hadith-title">${icon('quote')}${text().hadithTitle}</h2><p class="hadith-intro">${text().hadithIntro}</p></div></div>
+    <div class="hadith-slides" aria-live="${hadithPaused ? 'polite' : 'off'}">${hadiths.map((hadith, index) => `<figure class="hadith-slide ${index === hadithIndex ? 'active' : ''}" aria-roledescription="slide" aria-label="${hadithCount(index)}" ${index === hadithIndex ? '' : 'inert aria-hidden="true"'}><blockquote cite="${hadithUrl(hadith)}"><p class="hadith-arabic" lang="ar" dir="rtl">${hadith.arabic}</p>${showMeaning ? `<p class="hadith-meaning">${text()[hadith.key]}</p>` : ''}</blockquote><figcaption><a class="hadith-source" href="${hadithUrl(hadith)}" target="_blank" rel="noopener noreferrer">${hadithReference(hadith)}${icon('arrow-up-right')}</a><span class="grade">${text()[gradeKeys[hadith.grade]]}</span></figcaption></figure>`).join('')}</div>
+    <div class="hadith-foot"><div class="hadith-controls"><button class="icon-button" data-action="hadith-prev" aria-label="${text().previousHadith}" title="${text().previousHadith}">${icon('chevron-left')}</button><span class="hadith-count">${hadithCount(hadithIndex)}</span><button class="icon-button hadith-toggle" data-action="hadith-toggle" aria-label="${hadithPaused ? text().play : text().pause}" title="${hadithPaused ? text().play : text().pause}">${icon(hadithPaused ? 'play' : 'pause')}</button><button class="icon-button" data-action="hadith-next" aria-label="${text().nextHadith}" title="${text().nextHadith}">${icon('chevron-right')}</button></div><div class="hadith-progress" aria-hidden="true"><span></span></div><button class="button small hadith-share" data-action="share-hadith">${icon('share-2')}${text().shareHadith}</button></div></section>`;
+}
+// The countdown pauses (keeping its remaining time) while the banner is hovered, focused, off-screen, in a hidden tab, or paused.
+function syncHadith() {
+  const banner = document.querySelector<HTMLElement>('.hadith-banner');
+  window.clearTimeout(hadithTimer);
+  if (!banner) return;
+  const running = !hadithPaused && !hadithHeld && hadithVisible && !document.hidden && !activeModal;
+  if (running) {
+    hadithStartedAt = performance.now();
+    hadithTimer = window.setTimeout(() => showHadith(hadithIndex + 1), hadithRemaining);
+  } else if (hadithStartedAt) {
+    hadithRemaining = Math.max(0, hadithRemaining - (performance.now() - hadithStartedAt));
+    hadithStartedAt = 0;
+  }
+  banner.classList.toggle('held', !running);
+}
+function showHadith(index: number) {
+  const banner = document.querySelector<HTMLElement>('.hadith-banner'); if (!banner) return;
+  hadithIndex = (index + hadiths.length) % hadiths.length;
+  banner.querySelectorAll<HTMLElement>('.hadith-slide').forEach((slide, position) => {
+    const active = position === hadithIndex;
+    slide.classList.toggle('active', active); slide.inert = !active;
+    if (active) slide.removeAttribute('aria-hidden'); else slide.setAttribute('aria-hidden', 'true');
+  });
+  banner.querySelector('.hadith-count')!.textContent = hadithCount(hadithIndex);
+  // Restart the progress bar animation from zero.
+  const progress = banner.querySelector('.hadith-progress'); if (progress) progress.innerHTML = '<span></span>';
+  window.clearTimeout(hadithTimer); hadithStartedAt = 0; hadithRemaining = HADITH_MS;
+  syncHadith();
+}
+function toggleHadith(button: HTMLElement) {
+  hadithPaused = !hadithPaused;
+  const banner = button.closest<HTMLElement>('.hadith-banner')!;
+  const label = hadithPaused ? text().play : text().pause;
+  button.setAttribute('aria-label', label); button.title = label; button.innerHTML = icon(hadithPaused ? 'play' : 'pause');
+  banner.querySelector('.hadith-slides')?.setAttribute('aria-live', hadithPaused ? 'polite' : 'off');
+  if (!hadithPaused && !banner.classList.contains('playing')) { banner.classList.add('playing'); showHadith(hadithIndex); } else syncHadith();
+  createIcons({ icons });
+}
+function setupHadith() {
+  hadithObserver?.disconnect(); hadithObserver = null; window.clearTimeout(hadithTimer);
+  hadithStartedAt = 0; hadithRemaining = HADITH_MS; hadithHeld = false;
+  const banner = document.querySelector<HTMLElement>('.hadith-banner'); if (!banner) return;
+  const hold = (held: boolean) => { hadithHeld = held; syncHadith(); };
+  banner.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') hold(true); });
+  banner.addEventListener('pointerleave', event => { if (event.pointerType === 'mouse') hold(banner.contains(document.activeElement)); });
+  banner.addEventListener('focusin', () => hold(true));
+  banner.addEventListener('focusout', event => { if (!banner.contains(event.relatedTarget as Node | null)) hold(banner.matches(':hover')); });
+  const slides = banner.querySelector<HTMLElement>('.hadith-slides')!;
+  let startX = 0, startY = 0;
+  slides.addEventListener('touchstart', event => { startX = event.touches[0].clientX; startY = event.touches[0].clientY; }, { passive: true });
+  slides.addEventListener('touchend', event => {
+    const dx = event.changedTouches[0].clientX - startX, dy = event.changedTouches[0].clientY - startY;
+    if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
+    const forward = languageInfo[preferences.language].dir === 'rtl' ? dx > 0 : dx < 0;
+    showHadith(hadithIndex + (forward ? 1 : -1));
+  }, { passive: true });
+  if (!('IntersectionObserver' in window)) { hadithVisible = true; syncHadith(); return; }
+  hadithVisible = false;
+  hadithObserver = new IntersectionObserver(([entry]) => { hadithVisible = entry.isIntersecting; syncHadith(); }, { threshold: .35 });
+  hadithObserver.observe(banner);
+  syncHadith();
+}
+document.addEventListener('visibilitychange', () => syncHadith());
+
+const networkLabels: Record<ShareNetwork, () => string> = { whatsapp: () => brands.whatsapp.title, telegram: () => brands.telegram.title, facebook: () => brands.facebook.title, x: () => brands.x.title, threads: () => brands.threads.title, linkedin: () => 'LinkedIn', email: () => text().email };
+const networkColors: Record<ShareNetwork, string> = { whatsapp: brands.whatsapp.color, telegram: brands.telegram.color, facebook: brands.facebook.color, x: brands.x.color, threads: brands.threads.color, linkedin: '#0A66C2', email: '#8a6a2f' };
+const networkIcon = (network: ShareNetwork) => network === 'linkedin' ? icon('linkedin') : network === 'email' ? icon('mail') : brandIcon(network);
+const attribute = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+const shareUrl = () => `${SITE_URL}${languagePath(preferences.language)}`;
+const shareDays = () => upcomingDays(today(), 4, preferences.adjustment);
+const tagLabel = (reason: FastDay['reasons'][number]) => reason === 'white' ? text().white : text().weekly;
+function shareMessage(): ShareMessage {
+  if (shareSubject.kind === 'hadith') {
+    const hadith = hadiths[shareSubject.index];
+    const meaning = preferences.language === 'ar' ? undefined : text()[hadith.key];
+    return { title: text().hadithTitle, url: shareUrl(), text: composeHadithText({ arabic: hadith.arabic, meaning, reference: `${hadithReference(hadith)} (${text()[gradeKeys[hadith.grade]]})`, invite: text().shareInvite }) };
+  }
+  const days = shareDays().map(day => ({ label: format(day.date, { weekday: 'long', day: 'numeric', month: 'long' }), detail: [hijriLabel(day.date, { day: 'numeric', month: 'long' }), ...day.reasons.map(tagLabel)].join(' · ') }));
+  const reason = hadiths.find(hadith => hadith.id === 'deeds-presented')!;
+  return { title: text().shareHeading, url: shareUrl(), text: composeDaysText({ heading: text().shareHeading, days, quote: `${text()[reason.key]} — ${hadithReference(reason)}`, invite: text().shareInvite }) };
+}
+function shareImageInput(): ShareImageInput {
+  const lang = preferences.language, style = getComputedStyle(document.documentElement);
+  const common = {
+    dir: languageInfo[lang].dir, italic: languageInfo[lang].dir === 'ltr' && lang !== 'bn',
+    body: style.getPropertyValue('--body').trim() || 'sans-serif', display: style.getPropertyValue('--display').trim() || 'serif',
+    site: `${new URL(SITE_URL).host}${languagePath(lang).replace(/\/$/, '')}`, invite: text().shareInvite,
+  };
+  if (shareSubject.kind === 'hadith') {
+    const hadith = hadiths[shareSubject.index];
+    return { ...common, kind: 'hadith', title: text().hadithTitle, arabic: hadith.arabic, meaning: lang === 'ar' ? undefined : text()[hadith.key], reference: `${hadithReference(hadith)} · ${text()[gradeKeys[hadith.grade]]}` };
+  }
+  return { ...common, kind: 'days', heading: text().shareHeading, days: shareDays().map((day, index) => ({ weekday: format(day.date, { weekday: 'long' }), day: number(day.date.getDate()), month: format(day.date, { month: 'short' }), detail: hijriLabel(day.date), tags: day.reasons.map(reason => ({ kind: reason, label: tagLabel(reason) })), highlight: index === 0 })) };
+}
+function shareFileName() { return shareSubject.kind === 'hadith' ? `janat-hadith-${hadiths[shareSubject.index].id}.jpg` : `janat-fasting-days-${dateKey(today())}.jpg`; }
+function shareContent() {
+  const links = shareLinks(shareMessage());
+  const isHadith = shareSubject.kind === 'hadith';
+  return `<span class="modal-icon">${icon('share-2')}</span><h2 id="modal-title">${isHadith ? text().shareHadith : text().shareDays}</h2><p>${isHadith ? text().shareHadithIntro : text().shareIntro}</p>
+    <figure class="share-preview loading"><img alt="${text().shareImageAlt}" width="1080" height="1350" hidden></figure>
+    <button class="button primary full share-native" data-action="native-share" ${'share' in navigator ? '' : 'hidden'}>${icon('share-2')}${text().share}</button>
+    <p class="share-via">${text().shareVia}</p>
+    <div class="share-networks">${shareNetworks.map(network => `<a class="share-link" data-network="${network}" href="${attribute(links[network])}" ${network === 'email' ? '' : 'target="_blank" rel="noopener noreferrer"'}><span class="share-circle" style="--brand:${networkColors[network]}">${networkIcon(network)}</span><span>${networkLabels[network]()}</span></a>`).join('')}</div>
+    <div class="share-tools"><button class="button outline" data-action="copy-share">${icon('copy')}${text().copyText}</button><button class="button outline" data-action="download-share-image" disabled>${icon('image-down')}${text().downloadImage}</button></div>`;
+}
+async function prepareShareImage(dialog: HTMLDialogElement) {
+  const request = ++shareRequest; shareBlob = null;
+  const preview = dialog.querySelector<HTMLElement>('.share-preview');
+  try {
+    const blob = await renderShareImage(shareImageInput());
+    if (request !== shareRequest || activeModal !== 'share' || !preview?.isConnected) return;
+    shareBlob = blob;
+    if (shareImageUrl) URL.revokeObjectURL(shareImageUrl);
+    shareImageUrl = URL.createObjectURL(blob);
+    const image = preview.querySelector('img')!; image.src = shareImageUrl; image.hidden = false;
+    preview.classList.remove('loading');
+    dialog.querySelector<HTMLButtonElement>('[data-action="download-share-image"]')!.disabled = false;
+  } catch {
+    if (request === shareRequest && preview) preview.hidden = true;
+  }
+}
+async function nativeShare() {
+  const message = shareMessage();
+  const file = shareBlob ? new File([shareBlob], shareFileName(), { type: 'image/jpeg' }) : null;
+  // Many apps drop the `url` field when files are attached, so the link goes into the text instead.
+  const data: ShareData = file && navigator.canShare?.({ files: [file] })
+    ? { title: message.title, text: `${message.text}\n${message.url}`, files: [file] }
+    : { title: message.title, text: message.text, url: message.url };
+  try { await navigator.share(data); } catch (error) {
+    if ((error as DOMException).name === 'AbortError') return;
+    try { await navigator.share({ title: message.title, text: message.text, url: message.url }); } catch { /* the network buttons remain available */ }
+  }
+}
+function openShare(subject: typeof shareSubject) { shareSubject = subject; openModal('share'); }
 function calendarView() {
   const start = new Date(month.getFullYear(), month.getMonth(), 1, 12);
   const shift = (start.getDay() + 6) % 7;
@@ -175,16 +338,34 @@ function playVisibleVideos() {
   }), { rootMargin: '120px 0px' });
   videos.forEach(video => videoObserver!.observe(video));
 }
+// Noto Nastaliq Urdu draws ﷺ about two lines tall, so every ﷺ outside Arabic text is set in Naskh.
+function markSalawat(root: Node) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const found: Text[] = [];
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text;
+    if (node.data.includes('\uFDFA') && !node.parentElement?.closest('.salawat, [lang="ar"]')) found.push(node);
+  }
+  for (const node of found) {
+    const fragment = document.createDocumentFragment();
+    node.data.split('\uFDFA').forEach((part, index) => {
+      if (index) { const mark = document.createElement('span'); mark.className = 'salawat'; mark.textContent = '\uFDFA'; fragment.append(mark); }
+      if (part) fragment.append(part);
+    });
+    node.replaceWith(fragment);
+  }
+}
 function render() {
   const lang = preferences.language;
   updateHead();
-  app.innerHTML = `<a class="skip-link" href="#main" data-skip>${text().skipLink}</a><header class="site-header"><div class="header-inner"><a class="brand" href="${languagePath(lang)}" data-view="home" aria-label="Janat">${icon('leaf')}<span>janat<span class="brand-dot">.</span></span><span class="brand-ar" lang="ar">جنّات</span></a>
+  app.innerHTML = `<a class="skip-link" href="#main" data-skip>${text().skipLink}</a><header class="site-header"><div class="header-inner"><a class="brand" href="${languagePath(lang)}" data-view="home" aria-label="Janat">${icon('moon-star')}<span>janat<span class="brand-dot">.</span></span><span class="brand-ar" lang="ar">جنّات</span></a>
     <nav aria-label="${text().mainNav}">${(['home', 'calendar', 'logbook', 'quran', 'resources'] as View[]).map(item => `<button class="nav-link ${view === item ? 'active' : ''}" data-view="${item}" ${view === item ? 'aria-current="page"' : ''}>${icon(navIcons[item])}<span>${text()[item]}</span></button>`).join('')}</nav>
     <div class="header-actions"><label class="language-select" title="${text().languageLabel}">${icon('globe')}<span class="language-current" aria-hidden="true">${shortLanguageNames[lang] ?? lang.toUpperCase()}</span><select id="language" aria-label="${text().languageLabel}">${languages.map(code => `<option value="${code}" lang="${code}" ${code === lang ? 'selected' : ''}>${languageInfo[code].name}</option>`).join('')}</select></label><button class="button primary header-reminder" data-action="reminders" aria-label="${text().reminders}" title="${text().reminders}">${icon('bell')}<span>${text().reminders}</span></button></div></div></header>
-    <main id="main" tabindex="-1">${view === 'home' ? `<div class="date-line container"><span>${icon('sun')}${format(today(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span><span>${hijriLabel(today())}<span class="date-dot"></span>${text().hijriYear} ${number(hijriDate(today(), preferences.adjustment).year)}</span></div>${hero()}<div class="container">${stats()}${upcoming()}${power()}<section class="future-band"><div class="future-icon">${icon('book-open')}</div><div><span class="eyebrow green">${text().recitation} & ${text().revision}</span><h2>${text().quran}</h2><p>${text().quranIntro}</p><button class="text-button" data-view="quran">${text().quranHistory}${icon('arrow-right')}</button></div><span class="future-decoration" lang="ar">اقرأ</span></section>${faqSection(text())}</div>` : `<div class="container">${view === 'calendar' ? calendarView() : view === 'resources' ? resourcesView() : view === 'quran' ? quranView() : logbookView()}</div>`}</main>
-    <footer class="site-footer"><div class="container footer-main"><span class="footer-brand">${icon('leaf')}janat.</span><span>${text().footer}</span><button class="text-button" data-action="sources">${text().source}${icon('arrow-up-right')}</button><span class="privacy-footer">${icon('shield-check')}${text().privacyTitle}</span></div>
+    <main id="main" tabindex="-1">${view === 'home' ? `${hero()}<div class="container">${stats()}${upcoming()}${hadithBanner()}${power()}<section class="future-band"><div class="future-icon">${icon('book-open')}</div><div><span class="eyebrow green">${text().recitation} & ${text().revision}</span><h2>${text().quran}</h2><p>${text().quranIntro}</p><button class="text-button" data-view="quran">${text().quranHistory}${icon('arrow-right')}</button></div><span class="future-decoration" lang="ar">اقرأ</span></section>${faqSection(text())}</div>` : `<div class="container">${view === 'calendar' ? calendarView() : view === 'resources' ? resourcesView() : view === 'quran' ? quranView() : logbookView()}</div>`}</main>
+    <footer class="site-footer"><div class="container footer-main"><span class="footer-brand">${icon('moon-star')}janat.</span><span>${text().footer}</span><button class="text-button" data-action="sources">${text().source}${icon('arrow-up-right')}</button><span class="privacy-footer">${icon('shield-check')}${text().privacyTitle}</span></div>
     <div class="container footer-languages"><span class="footer-languages-title">${icon('globe')}${text().languagesTitle}</span><ul>${languages.map(code => `<li><a href="${languageLink(code)}" hreflang="${code}" lang="${code}" data-language="${code}" ${code === lang ? 'aria-current="true"' : ''}>${languageInfo[code].name}</a></li>`).join('')}</ul></div></footer><dialog id="modal" aria-labelledby="modal-title"></dialog>`;
-  bind(); createIcons({ icons });
+  bind(); createIcons({ icons }); markSalawat(app);
+  setupHadith();
   playVisibleVideos();
   if (!storageAvailable) toast(text().storageError);
 }
@@ -243,10 +424,14 @@ function openModal(kind: NonNullable<typeof activeModal>, date?: string) {
   if (kind === 'quran-calendar') content = `<span class="modal-icon">${icon('book-open')}</span><h2 id="modal-title">${text().quranCalendar}</h2>${subscriptionChoices('quran')}<p class="fine-print">${text().feedPrivacy}</p><button class="button outline full" data-action="download-quran">${icon('download')}${text().download}</button><p class="fine-print">${text().quranCalendarNote}</p>`;
   if (kind === 'settings') content = `<h2 id="modal-title">${text().calendarSettings}</h2><form id="settings-form"><label class="form-label" for="adjustment">${text().adjustment}</label><select id="adjustment" name="adjustment">${[-1, 0, 1].map(value => `<option value="${value}" ${preferences.adjustment === value ? 'selected' : ''}>${value === -1 ? text().minusDay : value === 0 ? text().sameDay : text().plusDay}</option>`).join('')}</select><p class="fine-print">${text().adjustHint}</p><button class="button primary full" type="submit">${icon('check')}${text().save}</button></form><button class="text-button danger delete-button" data-action="reset">${icon('trash-2')}${text().reset}</button>`;
   if (kind === 'record' && selected) content = `<span class="modal-icon">${icon('heart')}</span><h2 id="modal-title">${text().record}</h2><p>${format(parseDate(selected), { dateStyle: 'full' })}</p><p class="hijri-record">${hijriLabel(parseDate(selected))}</p><div class="record-options"><button class="button ${logbook[selected] === 'fasted' ? 'primary' : 'outline'}" data-status="fasted">${icon('check')}${text().fasted}</button><button class="button ${logbook[selected] === 'missed' ? 'selected-missed' : 'outline'}" data-status="missed">${icon('x')}${text().missed}</button></div>${logbook[selected] ? `<button class="text-button" data-status="clear">${text().undo}</button>` : ''}`;
+  if (kind === 'share') content = shareContent();
   if (kind === 'sources') content = `<h2 id="modal-title">${text().sourceTitle}</h2><p class="source-copy">${text().sourceBody}</p><div class="source-links"><a href="https://sunnah.com/tirmidhi:747" target="_blank" rel="noopener noreferrer">Jami at-Tirmidhi 747 ${icon('arrow-up-right')}</a><a href="https://sunnah.com/tirmidhi:761" target="_blank" rel="noopener noreferrer">Jami at-Tirmidhi 761 ${icon('arrow-up-right')}</a></div><p class="fine-print">${text().adjustHint}</p>`;
   dialog.innerHTML = `<button class="icon-button modal-close" data-action="close" aria-label="${text().close}" title="${text().close}">${icon('x')}</button>${content}`;
+  dialog.dataset.kind = kind;
   if (!dialog.open) dialog.showModal();
-  bind(dialog); createIcons({ icons });
+  bind(dialog); createIcons({ icons }); markSalawat(dialog);
+  syncHadith();
+  if (kind === 'share') void prepareShareImage(dialog);
   void updateSubscriptionChoices(dialog);
   dialog.querySelectorAll<HTMLInputElement>('#reminder-form input[type="checkbox"]').forEach(input => input.addEventListener('change', () => {
     const form = dialog.querySelector<HTMLFormElement>('#reminder-form')!; const data = new FormData(form);
@@ -282,6 +467,19 @@ function bind(root: ParentNode = app) {
     if (action === 'delete-session') { quranSessions = quranSessions.filter(session => session.id !== button.dataset.id); persist('janat.quran', quranSessions); render(); toast(text().recorded); }
     if (action === 'reset-quran' && window.confirm(text().resetQuranConfirm)) { quranSessions = []; persist('janat.quran', quranSessions); render(); }
     if (action === 'reset' && window.confirm(text().resetConfirm)) { logbook = {}; persist('janat.logbook', logbook); closeModal(); render(); }
+    if (action === 'share-days') openShare({ kind: 'days' });
+    if (action === 'share-hadith') openShare({ kind: 'hadith', index: hadithIndex });
+    if (action === 'hadith-prev' || action === 'hadith-next') showHadith(hadithIndex + (action === 'hadith-next' ? 1 : -1));
+    if (action === 'hadith-toggle') toggleHadith(button);
+    if (action === 'native-share') void nativeShare();
+    if (action === 'copy-share') {
+      const message = shareMessage();
+      void navigator.clipboard.writeText(`${message.text}\n${message.url}`).then(() => toast(text().textCopied)).catch(() => toast(text().clipboardError));
+    }
+    if (action === 'download-share-image' && shareBlob) {
+      const url = URL.createObjectURL(shareBlob); const link = document.createElement('a'); link.href = url; link.download = shareFileName(); link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000); toast(text().imageSaved);
+    }
   }));
   root.querySelector('#language')?.addEventListener('change', event => { const value = (event.target as HTMLSelectElement).value; if (isLanguage(value)) void switchLanguage(value); });
   root.querySelectorAll<HTMLAnchorElement>('a[data-language]').forEach(link => link.addEventListener('click', event => {
@@ -313,6 +511,12 @@ function bind(root: ParentNode = app) {
     pointerStartedOutside = false;
   });
   dialog?.addEventListener('cancel', () => { activeModal = null; });
+  dialog?.addEventListener('close', () => {
+    shareRequest++; shareBlob = null;
+    if (shareImageUrl) { URL.revokeObjectURL(shareImageUrl); shareImageUrl = ''; }
+    delete dialog.dataset.kind;
+    syncHadith();
+  });
 }
 function ensureFont(language: Language) {
   const href = fontUrl(language);

@@ -1,6 +1,8 @@
 export const languages = ['en', 'ar', 'ur', 'id', 'tr', 'bn', 'fa', 'ms', 'fr', 'es'] as const;
 export type Language = typeof languages[number];
 
+export const SITE_URL = 'https://janat.uably.com';
+
 type LanguageInfo = { name: string; locale: string; dir: 'ltr' | 'rtl'; ogLocale: string; font?: string };
 
 export const languageInfo: Record<Language, LanguageInfo> = {
