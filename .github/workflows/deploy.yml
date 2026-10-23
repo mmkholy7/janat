@@ -1,8 +1,13 @@
-name: Deploy to Cloudflare Pages
+name: Deploy to Cloudflare
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -22,4 +27,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name janat --branch main
+          # The action defaults to Wrangler 3.90, which cannot read wrangler.jsonc.
+          wranglerVersion: '4.152.0'
+          # janat.uably.com is served by the "janat" Worker configured in wrangler.jsonc.
+          command: deploy
