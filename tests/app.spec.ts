@@ -310,15 +310,73 @@ test('shares upcoming fasts and rotates authentic hadith', async ({ page }) => {
   expect(await fitsViewport(page)).toBe(true);
   const download = page.waitForEvent('download');
   await dialog.locator('[data-action="download-share-image"]').click();
-  expect((await download).suggestedFilename()).toBe('janat-fasting-days-2026-10-19.jpg');
+  expect((await download).suggestedFilename()).toBe('janat-sunnah-fasts-week-2026-10-19.jpg');
   await page.keyboard.press('Escape');
 
   await chooseLanguage(page, 'ur');
-  await page.locator('.hero [data-action="share-days"]').click();
+  await page.locator('.hero [data-action="share-day"]').click();
   await page.clock.runFor(3000);
   await expect(dialog.locator('.share-preview img')).toBeVisible();
   expect(new URL((await dialog.locator('[data-network="whatsapp"]').getAttribute('href'))!).searchParams.get('text')).toContain('https://janat.uably.com/ur/');
   expect(await fitsViewport(page)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('colours the white days and shares a day, week, or month from the calendar', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/#calendar');
+  // 24–26 October 2026 are the 13th–15th of Jumada I; the 26th is also a Monday.
+  await expect(page.locator('.calendar-cell.white-day')).toHaveCount(3);
+  await expect(page.locator('.calendar-cell.white-day[data-date="2026-10-26"] .cell-indicator svg')).toHaveCount(2);
+  await expect(page.locator('.calendar-cell.white-day[data-date="2026-10-22"]')).toHaveCount(0);
+  const background = (key: string) => page.locator(`.calendar-cell[data-date="${key}"]`).evaluate(cell => getComputedStyle(cell).backgroundImage + getComputedStyle(cell).backgroundColor);
+  expect(await background('2026-10-24')).not.toBe(await background('2026-10-22'));
+
+  const dialog = page.locator('#modal');
+  const sharedText = () => dialog.locator('[data-network="whatsapp"]').evaluate(link => new URL((link as HTMLAnchorElement).href).searchParams.get('text'));
+  const period = (name: string) => dialog.locator(`[data-period="${name}"]`);
+  await page.locator('[data-action="share-month"]').click();
+  await expect(period('month')).toHaveAttribute('aria-pressed', 'true');
+  await expect(dialog.locator('.share-step-label')).toHaveText('October 2026');
+  await expect(dialog.locator('[data-step="-1"]')).toBeDisabled();
+  expect(await sharedText()).toContain('Sunnah fasting calendar · October 2026');
+  expect(await sharedText()).toContain('Monday 26 October');
+  expect(await sharedText()).not.toContain('Thursday 15 October');
+  await page.clock.runFor(3000);
+  await expect.poll(() => dialog.locator('.share-preview img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(1080);
+
+  await dialog.locator('[data-step="1"]').click();
+  await expect(dialog.locator('.share-step-label')).toHaveText('November 2026');
+  await expect(dialog.locator('[data-step="-1"]')).toBeEnabled();
+  expect(await sharedText()).toContain('November 2026');
+  await dialog.locator('[data-step="-1"]').click();
+  await expect(dialog.locator('[data-step="1"]')).toBeFocused();
+
+  await period('week').click();
+  await expect(period('week')).toHaveAttribute('aria-pressed', 'true');
+  await expect(dialog.locator('.share-step-label')).toHaveText(/^19\s*–\s*25 October$/);
+  expect(await sharedText()).toContain('Saturday 24 October');
+  expect(await sharedText()).not.toContain('Thursday 29 October');
+
+  await period('day').click();
+  await expect(dialog.locator('.share-step-label')).toHaveText('Monday 19 October');
+  await dialog.locator('[data-step="1"]').click();
+  await expect(dialog.locator('.share-step-label')).toHaveText('Thursday 22 October');
+  expect(await sharedText()).toMatch(/^🌙 Sunnah fasting day\n• Thursday 22 October/);
+  await page.clock.runFor(3000);
+  const download = page.waitForEvent('download');
+  await dialog.locator('[data-action="download-share-image"]').click();
+  expect((await download).suggestedFilename()).toBe('janat-sunnah-fast-2026-10-22.jpg');
+  await page.keyboard.press('Escape');
+
+  await page.locator('.calendar-cell[data-date="2026-10-24"]').click();
+  await dialog.locator('[data-action="share-day"]').click();
+  await expect(dialog.locator('#modal-title')).toHaveText('Share these days');
+  await expect(dialog.locator('.share-step-label')).toHaveText('Saturday 24 October');
+  expect(await sharedText()).toContain('White days');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.calendar-cell[data-date="2026-10-24"]')).toBeFocused();
   expect(errors).toEqual([]);
 });
 

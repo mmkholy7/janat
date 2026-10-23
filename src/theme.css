@@ -30,6 +30,7 @@
   --accent-ink: #fffdf8;
   --moon: #4f5f9c;
   --moon-soft: #e7eaf6;
+  --moon-line: #b4bde3;
   --rose: #ad5547;
   --rose-soft: #f8e5df;
 
@@ -66,6 +67,7 @@
     --accent-ink: #0b1430;
     --moon: #b3bff0;
     --moon-soft: #222c52;
+    --moon-line: #4a5a99;
     --rose: #f0a596;
     --rose-soft: #3a2232;
     --shadow: 0 1px 2px #0000003d, 0 12px 32px #0000004d;
@@ -121,7 +123,7 @@ input { accent-color: var(--gold); }
 .icon-button { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface); color: var(--ink); transition: background .2s, border-color .2s; }
 .icon-button:not(:disabled):hover { background: var(--raised); }
 .icon-button:disabled { opacity: .5; }
-html[dir=rtl] :is(.text-button, .hero-link, .card-action, .month-controls, .hadith-controls [data-action=hadith-prev], .hadith-controls [data-action=hadith-next], .resource-link, .recent-row) svg { transform: scaleX(-1); }
+html[dir=rtl] :is(.text-button, .hero-link, .card-action, .month-controls .icon-button, .share-step .icon-button, .hadith-controls [data-action=hadith-prev], .hadith-controls [data-action=hadith-next], .resource-link, .recent-row) svg { transform: scaleX(-1); }
 
 /* ---------- Header (always midnight) ---------- */
 .site-header { position: sticky; top: 0; z-index: 30; color: var(--night-ink); }
@@ -242,6 +244,8 @@ html:is([dir=rtl], [lang=bn]) .hero h1 span { font-style: normal; }
 .nearest .day-relative { background: #e2bd6e2e; color: #f3dca6; }
 .day-date { position: relative; display: flex; align-items: center; gap: 12px; margin-block: 14px; font-family: var(--display); font-size: 46px; font-weight: 600; line-height: 1; color: var(--gold-text); }
 .nearest .day-date { color: var(--gold-bright); }
+.day-card.white-day:not(.nearest) { border-color: var(--moon-line); background: linear-gradient(170deg, var(--surface) 35%, var(--moon-soft)); }
+.day-card.white-day:not(.nearest) .day-date { color: var(--moon); }
 .day-date > span { font-family: var(--body); font-size: 14.5px; font-weight: 600; line-height: 1.5; color: inherit; }
 .day-date > span { color: var(--ink); }
 .nearest .day-date > span { color: var(--night-ink); }
@@ -390,6 +394,11 @@ html:is([dir=rtl], [lang=bn]) .weekday { letter-spacing: 0; text-transform: none
 .calendar-cell:disabled { background: transparent; border-style: dashed; }
 .calendar-cell.outside { opacity: .42; }
 .calendar-cell.fast-day { border-color: #d9bf83; background: var(--gold-soft); }
+/* The three white days (13–15) get a moonlit silver tone, distinct from Monday/Thursday gold. */
+.calendar-cell.white-day { border-color: var(--moon-line); background: linear-gradient(160deg, var(--surface), var(--moon-soft) 70%); }
+.calendar-cell.white-day .cell-indicator, .calendar-cell.white-day .cell-date small { color: var(--moon); }
+.calendar-cell.white-day:not(.fasted, .missed) .cell-date { color: var(--moon); }
+.calendar-cell.white-day .cell-indicator svg + svg { color: var(--gold-text); }
 .calendar-cell.fasted { border-color: var(--night); background: var(--night); color: var(--night-ink); }
 .calendar-cell.fasted .cell-date small, .calendar-cell.fasted .cell-indicator { color: var(--gold-bright); }
 .calendar-cell.missed { border-color: #e7c2b8; background: var(--rose-soft); }
@@ -404,7 +413,7 @@ html:is([dir=rtl], [lang=bn]) .weekday { letter-spacing: 0; text-transform: none
 .calendar-legend > span { display: flex; align-items: center; gap: 7px; }
 .calendar-legend svg { width: 14px; height: 14px; color: var(--ink); }
 .legend-dot { width: 12px; height: 12px; border-radius: 4px; background: var(--gold-soft); border: 1px solid #d9bf83; }
-.legend-dot.white { background: var(--moon-soft); border-color: var(--moon); }
+.legend-dot.white { background: linear-gradient(160deg, var(--surface), var(--moon-soft)); border-color: var(--moon-line); }
 .calendar-hint { margin-top: 12px; font-size: 14px; line-height: 1.7; }
 
 /* Logbook */
@@ -537,6 +546,14 @@ dialog > .text-button:not(.share-shuffle) { margin-top: 12px; }
 .share-preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .share-preview.loading::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, #ffffff1a 50%, transparent 70%) 0 0 / 220% 100%; animation: shimmer 1.3s linear infinite; }
 @keyframes shimmer { to { background-position: -220% 0; } }
+.month-share { margin-inline-start: 6px; }
+.share-period { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-top: 18px; padding: 4px; border: 1px solid var(--line); border-radius: 14px; background: var(--raised); }
+.share-period button { min-height: 38px; padding: 6px 10px; border-radius: 10px; font-size: 14px; font-weight: 600; color: var(--muted); transition: background .2s, color .2s, box-shadow .2s; }
+.share-period button:hover { color: var(--ink); }
+.share-period button[aria-pressed=true] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px #17213b14, 0 4px 12px #17213b14; }
+.share-step { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.share-step .icon-button { width: 36px; height: 36px; border-radius: 10px; }
+.share-step-label { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; text-align: center; }
 .share-shuffle { display: flex; margin: 10px auto 0; padding: 8px 14px; border-radius: 999px; }
 .share-shuffle:hover { gap: 8px; background: var(--gold-soft); }
 .share-shuffle + .share-native { margin-top: 10px; }
