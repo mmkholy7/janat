@@ -55,6 +55,11 @@ describe('sharing', () => {
     expect(days).toContain('Monday 19 October');
     expect(days).toContain('10 Jumada I');
     expect(days.trim().endsWith('Join me')).toBe(true);
+    const withHadith = composeDaysText({ heading: 'Upcoming', days: [{ label: 'Monday 19 October', detail: '7 Jumada I' }], hadith: { arabic: 'تسحروا', meaning: 'Take suhoor', reference: 'Sahih al-Bukhari 1923 (Sahih)' }, invite: 'Join me' });
+    expect(withHadith.indexOf('Monday 19 October')).toBeLessThan(withHadith.indexOf('تسحروا'));
+    expect(withHadith.indexOf('تسحروا')).toBeLessThan(withHadith.indexOf('Take suhoor'));
+    expect(withHadith).toContain('— Sahih al-Bukhari 1923 (Sahih)');
+    expect(withHadith.trim().endsWith('Join me')).toBe(true);
     const hadith = composeHadithText({ arabic: 'صوم يوم عرفة', meaning: 'Fasting on the day of Arafah', reference: 'Sahih Muslim 1162b', invite: 'Join me' });
     expect(hadith.indexOf('صوم')).toBeLessThan(hadith.indexOf('Fasting'));
     expect(hadith).toContain('Sahih Muslim 1162b');

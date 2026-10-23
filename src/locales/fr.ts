@@ -168,6 +168,7 @@ const fr: Messages = {
   play: 'Lecture',
   previousHadith: 'Hadith précédent',
   nextHadith: 'Hadith suivant',
+  anotherHadith: 'Un autre hadith',
   gradeSahih: 'Sahih',
   gradeHasan: 'Hasan',
   collectionBukhari: 'Sahih al-Bukhari',

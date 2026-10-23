@@ -275,13 +275,13 @@ test('shares upcoming fasts and rotates authentic hadith', async ({ page }) => {
   await banner.locator('[data-action="hadith-toggle"]').click();
   await expect(banner.locator('[data-action="hadith-toggle"]')).toHaveAttribute('aria-label', 'Play');
   await banner.locator('[data-action="hadith-next"]').click();
-  const reference = (await source().textContent())!.trim();
+  const hadithReference = (await source().textContent())!.trim();
 
   await banner.locator('[data-action="share-hadith"]').click();
   const dialog = page.locator('#modal');
   await expect(dialog).toHaveAttribute('data-kind', 'share');
   await expect(dialog.locator('#modal-title')).toHaveText('Share this hadith');
-  expect(new URL((await dialog.locator('[data-network="telegram"]').getAttribute('href'))!).searchParams.get('text')).toContain(reference);
+  expect(new URL((await dialog.locator('[data-network="telegram"]').getAttribute('href'))!).searchParams.get('text')).toContain(hadithReference);
   await page.keyboard.press('Escape');
 
   await page.locator('.upcoming-section [data-action="share-days"]').click();
@@ -295,6 +295,16 @@ test('shares upcoming fasts and rotates authentic hadith', async ({ page }) => {
   expect(whatsapp.hostname).toBe('wa.me');
   expect(whatsapp.searchParams.get('text')).toContain('Monday 19 October');
   expect(whatsapp.searchParams.get('text')).toContain('https://janat.uably.com/');
+  const sharedText = () => dialog.locator('[data-network="whatsapp"]').evaluate(link => new URL((link as HTMLAnchorElement).href).searchParams.get('text'));
+  const reference = /— (Sahih al-Bukhari|Sahih Muslim|Jami at-Tirmidhi|Sunan Abi Dawud) \d+[a-z]? \((Sahih|Hasan)\)/;
+  const withHadith = (await sharedText())!;
+  expect(withHadith).toMatch(reference);
+  await dialog.locator('[data-action="shuffle-hadith"]').click();
+  await expect.poll(sharedText).not.toBe(withHadith);
+  expect(await sharedText()).toMatch(reference);
+  expect(await sharedText()).toContain('Monday 19 October');
+  await page.clock.runFor(3000);
+  await expect(dialog.locator('[data-action="download-share-image"]')).toBeEnabled();
   expect(await fitsViewport(page)).toBe(true);
   const download = page.waitForEvent('download');
   await dialog.locator('[data-action="download-share-image"]').click();

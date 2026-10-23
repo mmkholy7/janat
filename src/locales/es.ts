@@ -168,6 +168,7 @@ const es: Messages = {
   play: 'Reproducir',
   previousHadith: 'Hadiz anterior',
   nextHadith: 'Hadiz siguiente',
+  anotherHadith: 'Otro hadiz',
   gradeSahih: 'Sahih',
   gradeHasan: 'Hasan',
   collectionBukhari: 'Sahih al-Bukhari',

@@ -168,6 +168,7 @@ const fa: Messages = {
   play: 'پخش',
   previousHadith: 'حدیث قبلی',
   nextHadith: 'حدیث بعدی',
+  anotherHadith: 'حدیثی دیگر',
   gradeSahih: 'صحیح',
   gradeHasan: 'حسن',
   collectionBukhari: 'صحیح بخاری',

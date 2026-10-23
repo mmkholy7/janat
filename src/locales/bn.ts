@@ -168,6 +168,7 @@ const bn: Messages = {
   play: 'চালু করুন',
   previousHadith: 'আগের হাদিস',
   nextHadith: 'পরের হাদিস',
+  anotherHadith: 'অন্য একটি হাদিস',
   gradeSahih: 'সহিহ',
   gradeHasan: 'হাসান',
   collectionBukhari: 'সহিহ বুখারি',

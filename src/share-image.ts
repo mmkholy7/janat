@@ -12,9 +12,10 @@ const LATIN_DISPLAY = "'Fraunces', Georgia, serif";
 export type ShareImageTag = { kind: 'weekly' | 'white'; label: string };
 export type ShareImageDay = { weekday: string; day: string; month: string; detail: string; tags: ShareImageTag[]; highlight?: boolean };
 type Common = { dir: 'ltr' | 'rtl'; italic: boolean; body: string; display: string; site: string; invite: string };
+export type ShareImageQuote = { arabic: string; meaning?: string; reference: string };
 export type ShareImageInput = Common & (
-  | { kind: 'days'; heading: string; days: ShareImageDay[] }
-  | { kind: 'hadith'; title: string; arabic: string; meaning?: string; reference: string }
+  | { kind: 'days'; heading: string; days: ShareImageDay[]; hadith?: ShareImageQuote }
+  | ({ kind: 'hadith'; title: string } & ShareImageQuote)
 );
 type Ctx = CanvasRenderingContext2D;
 
@@ -149,11 +150,50 @@ function ornament(ctx: Ctx, x: number, y: number) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.fillStyle = GOLD; ctx.fillRect(-7, -7, 14, 14); ctx.restore();
 }
 
+const QUOTE = { arabic: 42, meaning: 30, reference: 26, ornament: 34, gap: 16 };
+type QuoteLayout = ReturnType<typeof measureQuote>;
+
+/** Wraps a hadith for the days image, shrinking it until it fits the height left under the days. */
+function measureQuote(ctx: Ctx, input: Common, quote: ShareImageQuote, width: number, maxHeight: number) {
+  // Nastaliq (Urdu) cascades well above and below its line, so it needs more room.
+  const nastaliq = /nastaliq/i.test(input.display);
+  const meaningLineHeight = nastaliq ? 2.2 : input.dir === 'rtl' ? 1.85 : 1.5, referenceGap = nastaliq ? 34 : QUOTE.gap;
+  const measure = (scale: number) => {
+    const arabicSize = Math.round(QUOTE.arabic * scale), meaningSize = Math.round(QUOTE.meaning * scale);
+    ctx.direction = 'rtl'; ctx.font = `500 ${arabicSize}px ${ARABIC}`;
+    const arabic = wrap(ctx, quote.arabic, width);
+    ctx.direction = input.dir; const meaningFont = `${input.italic ? 'italic ' : ''}400 ${meaningSize}px ${input.display}`; ctx.font = meaningFont;
+    const meaning = quote.meaning ? wrap(ctx, quote.meaning, width) : [];
+    const height = QUOTE.ornament + arabic.length * arabicSize * 1.75 + (meaning.length ? QUOTE.gap + meaning.length * meaningSize * meaningLineHeight : 0) + referenceGap + QUOTE.reference;
+    return { arabicSize, meaningSize, meaningFont, meaningLineHeight, referenceGap, arabic, meaning, height, scale };
+  };
+  let layout = measure(1);
+  for (let scale = .94; layout.height > maxHeight && scale > .5; scale *= .94) layout = measure(scale);
+  return layout;
+}
+
+function drawQuote(ctx: Ctx, input: Common, quote: ShareImageQuote, layout: QuoteLayout, top: number, width: number) {
+  ornament(ctx, W / 2, top + 8);
+  let y = top + QUOTE.ornament;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.direction = 'rtl'; ctx.font = `500 ${layout.arabicSize}px ${ARABIC}`; ctx.fillStyle = '#f4e2b6';
+  layout.arabic.forEach(line => { ctx.fillText(line, W / 2, y + layout.arabicSize * .875); y += layout.arabicSize * 1.75; });
+  if (layout.meaning.length) {
+    y += QUOTE.gap; ctx.direction = input.dir; ctx.fillStyle = INK;
+    const step = layout.meaningSize * layout.meaningLineHeight;
+    layout.meaning.forEach(line => { fillCentered(ctx, line, W / 2, y + step / 2, layout.meaningFont, layout.meaningSize); y += step; });
+  }
+  y += layout.referenceGap; ctx.direction = input.dir; ctx.fillStyle = GOLD;
+  fit(ctx, quote.reference, size => `600 ${size}px ${input.body}`, QUOTE.reference, width);
+  ctx.fillText(quote.reference, W / 2, y + QUOTE.reference / 2);
+  ctx.textBaseline = 'alphabetic';
+}
+
 function daysLayout(ctx: Ctx, input: Extract<ShareImageInput, { kind: 'days' }>) {
   const rtl = input.dir === 'rtl';
   const start = rtl ? W - PAD : PAD;
   ctx.direction = input.dir; ctx.textAlign = rtl ? 'right' : 'left'; ctx.textBaseline = 'alphabetic';
-  let size = 76, lines: string[];
+  let size = input.hadith ? 66 : 76, lines: string[];
   for (;;) { ctx.font = `600 ${size}px ${input.display}`; lines = wrap(ctx, input.heading, W - PAD * 2 - 20); if (lines.length <= 2 || size <= 46) break; size -= 4; }
   const lineHeight = size * (rtl ? 1.45 : 1.16);
   let y = 300 + size * .2;
@@ -161,10 +201,26 @@ function daysLayout(ctx: Ctx, input: Extract<ShareImageInput, { kind: 'days' }>)
   y = y - lineHeight + 40;
   ctx.fillStyle = GOLD; ctx.fillRect(rtl ? start - 110 : start, y, 110, 4);
 
-  const top = y + 52, bottom = H - 228, gap = 20, count = input.days.length;
-  const rowHeight = Math.min(156, (bottom - top - gap * (count - 1)) / count);
+  const top = y + (input.hadith ? 44 : 52), bottom = H - (input.hadith ? 212 : 228), gap = input.hadith ? 16 : 20;
+  const quoteWidth = W - PAD * 2 - 40, quoteGap = 36, rowLimit = input.hadith ? 132 : 156;
+  let days = input.days, quote: QuoteLayout | undefined;
+  if (input.hadith) {
+    // Three days when the hadith is short; two when it needs the room to stay readable.
+    for (const count of [3, 2]) {
+      days = input.days.slice(0, count);
+      quote = measureQuote(ctx, input, input.hadith, quoteWidth, bottom - top - days.length * rowLimit - (days.length - 1) * gap - quoteGap);
+      if (quote.scale >= .8) break;
+    }
+  }
+  const count = days.length;
+  const rowsBottom = quote ? bottom - quote.height - quoteGap : bottom;
+  const rowHeight = Math.min(rowLimit, (rowsBottom - top - gap * (count - 1)) / count);
   const cardX = PAD, cardWidth = W - PAD * 2;
-  input.days.forEach((day, index) => {
+  if (quote && input.hadith) {
+    const rowsEnd = top + count * rowHeight + (count - 1) * gap + quoteGap;
+    drawQuote(ctx, input, input.hadith, quote, rowsEnd + Math.max(0, (bottom - rowsEnd - quote.height) / 2), quoteWidth);
+  }
+  days.forEach((day, index) => {
     const rowTop = top + index * (rowHeight + gap);
     roundRect(ctx, cardX, rowTop, cardWidth, rowHeight, 30);
     ctx.fillStyle = day.highlight ? 'rgba(226,189,110,.12)' : 'rgba(255,255,255,.05)'; ctx.fill();
@@ -250,15 +306,16 @@ async function loadFonts(fonts: [string, string][]) {
 
 export async function renderShareImage(input: ShareImageInput): Promise<Blob> {
   const sample = input.kind === 'days'
-    ? [input.heading, input.invite, ...input.days.flatMap(day => [day.weekday, day.day, day.month, day.detail, ...day.tags.map(tag => tag.label)])].join(' ')
+    ? [input.heading, input.invite, ...input.days.flatMap(day => [day.weekday, day.day, day.month, day.detail, ...day.tags.map(tag => tag.label)]), input.hadith?.meaning ?? '', input.hadith?.reference ?? ''].join(' ')
     : [input.title, input.invite, input.meaning ?? '', input.reference].join(' ');
+  const quote = input.kind === 'hadith' ? input : input.hadith;
   await loadFonts([
     [`650 60px ${LATIN_DISPLAY}`, `janat.${input.site}`],
-    [`500 42px ${ARABIC}`, `جنّات ${input.kind === 'hadith' ? input.arabic : ''}`],
+    [`500 42px ${ARABIC}`, `جنّات ${quote?.arabic ?? ''}`],
     [`400 34px ${ARABIC}`, SALAWAT],
     [`600 40px ${input.display}`, sample],
     [`500 26px ${input.body}`, sample],
-    ...(input.kind === 'hadith' && input.italic ? [[`italic 400 34px ${input.display}`, sample] as [string, string]] : []),
+    ...(quote?.meaning && input.italic ? [[`italic 400 34px ${input.display}`, sample] as [string, string]] : []),
   ]);
   const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');

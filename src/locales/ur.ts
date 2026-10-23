@@ -168,6 +168,7 @@ const ur: Messages = {
   play: 'چلائیں',
   previousHadith: 'پچھلی حدیث',
   nextHadith: 'اگلی حدیث',
+  anotherHadith: 'دوسری حدیث',
   gradeSahih: 'صحیح',
   gradeHasan: 'حسن',
   collectionBukhari: 'صحیح بخاری',

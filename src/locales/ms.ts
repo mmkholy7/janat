@@ -168,6 +168,7 @@ const ms: Messages = {
   play: 'Mainkan',
   previousHadith: 'Hadis sebelumnya',
   nextHadith: 'Hadis seterusnya',
+  anotherHadith: 'Hadis lain',
   gradeSahih: 'Sahih',
   gradeHasan: 'Hasan',
   collectionBukhari: 'Sahih al-Bukhari',

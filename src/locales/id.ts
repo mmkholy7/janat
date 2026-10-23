@@ -168,6 +168,7 @@ const id: Messages = {
   play: 'Putar',
   previousHadith: 'Hadits sebelumnya',
   nextHadith: 'Hadits berikutnya',
+  anotherHadith: 'Hadits lain',
   gradeSahih: 'Shahih',
   gradeHasan: 'Hasan',
   collectionBukhari: 'Shahih al-Bukhari',
