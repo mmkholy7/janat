@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-Open the URL printed by Vite (normally http://localhost:5173). In GitHub Codespaces, use the forwarded port. `npm run build` produces the frontend in `dist/`. The calendar subscription endpoint lives in `functions/` and requires Cloudflare Pages Functions. Other static hosts retain local tracking, event links, and downloads but not the subscription feed. No secrets or database are required. Use HTTPS in production.
+Open the URL printed by Vite (normally http://localhost:5173). In GitHub Codespaces, use the forwarded port. `npm run build` produces the frontend in `dist/`. The calendar subscription endpoint lives in `functions/` and is served by the Cloudflare Worker in `worker/` (see `wrangler.jsonc`). Other static hosts retain local tracking, event links, and downloads but not the subscription feed. No secrets or database are required. Use HTTPS in production.
 
 ## Available now
 
@@ -28,7 +28,7 @@ Open the URL printed by Vite (normally http://localhost:5173). In GitHub Codespa
 - Local Quran recitation/revision sessions, minutes and pages, daily minute goals, deletion, and JSON export at `/#quran`.
 - A separate 30-day daily Quran calendar download with 8-hour-ahead alerts and distinct event identifiers.
 - Google Calendar, Outlook.com, and Microsoft 365 event drafts without downloading or uploading files.
-- Read-only rolling subscriptions for Google, Outlook, Microsoft 365, and Apple Calendar, backed by a public Cloudflare Pages Function. No account access or personal activity history is shared.
+- Read-only rolling subscriptions for Google, Outlook, Microsoft 365, and Apple Calendar, backed by a public Cloudflare Worker endpoint. No account access or personal activity history is shared.
 
 ## Languages and search
 
@@ -36,7 +36,7 @@ Each language has its own address: `/` for English and `/ar/`, `/ur/`, `/id/`, `
 
 `npm run build` pre-renders a static page per language (`dist/<lang>/index.html`) with a translated title and description, canonical URL, reciprocal `hreflang` alternates, Open Graph and Twitter cards, JSON-LD (`WebSite`, `WebApplication`, `FAQPage`), and readable content for crawlers and visitors without JavaScript. It also writes `dist/sitemap.xml`, which `public/robots.txt` references. The canonical domain is `SITE_URL` in `src/seo.ts`; change it when deploying elsewhere. After each domain change, submit the sitemap in Google Search Console and Bing Webmaster Tools.
 
-`public/_headers` sets security headers and long-lived caching for hashed assets on Cloudflare Pages.
+`public/_headers` sets security headers and long-lived caching for hashed assets on Cloudflare.
 
 Translations other than English were drafted with machine assistance. Have native speakers, ideally familiar with Islamic terminology, review them before promoting a language.
 
