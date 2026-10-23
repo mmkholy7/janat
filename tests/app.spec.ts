@@ -8,7 +8,9 @@ async function chooseLanguage(page: Page, language: string) {
   await expect(page.locator('html')).toHaveAttribute('lang', language);
 }
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page }, testInfo) => {
+  await page.route('https://www.googletagmanager.com/**', route => route.fulfill({ contentType: 'text/javascript', body: '' }));
+  if (!testInfo.title.includes('analytics')) await page.addInitScript(() => localStorage.setItem('janat.consent', 'denied'));
   await page.clock.install({ time: new Date('2026-10-19T12:00:00') });
   await page.goto('/');
 });
@@ -318,6 +320,37 @@ test('shares upcoming fasts and rotates authentic hadith', async ({ page }) => {
   expect(new URL((await dialog.locator('[data-network="whatsapp"]').getAttribute('href'))!).searchParams.get('text')).toContain('https://janat.uably.com/ur/');
   expect(await fitsViewport(page)).toBe(true);
   expect(errors).toEqual([]);
+});
+
+test('analytics load only after consent and the choice can be changed', async ({ page }) => {
+  const tagRequests: string[] = [];
+  page.on('request', request => { if (request.url().startsWith('https://www.googletagmanager.com/')) tagRequests.push(request.url()); });
+  const banner = page.locator('.consent');
+  await expect(banner).toContainText('Google analytics cookies');
+  await expect(page.locator('.faq-section')).toContainText('only if you accept them');
+  for (const language of languages) {
+    await chooseLanguage(page, language);
+    await expect(banner).toHaveAttribute('data-lang', language);
+    expect(await fitsViewport(page), language).toBe(true);
+    expect(await banner.evaluate(element => { const box = element.getBoundingClientRect(); return box.left >= 0 && box.right <= innerWidth && box.bottom <= innerHeight; }), language).toBe(true);
+  }
+  await chooseLanguage(page, 'en');
+  expect(tagRequests).toEqual([]);
+  await banner.getByRole('button', { name: 'Accept' }).click();
+  await expect(banner).toHaveCount(0);
+  await expect.poll(() => tagRequests).toEqual(['https://www.googletagmanager.com/gtm.js?id=GTM-KNCXQJPL']);
+  await page.reload();
+  await expect(page.locator('h1')).toBeVisible();
+  await expect(banner).toHaveCount(0);
+  await expect.poll(() => tagRequests.length).toBe(2);
+  await page.locator('[data-action="consent-settings"]').click();
+  await banner.getByRole('button', { name: 'Decline' }).click();
+  expect(await page.evaluate(() => localStorage.getItem('janat.consent'))).toBe('denied');
+  expect(await page.evaluate(() => Array.from((window as unknown as { dataLayer: IArguments[] }).dataLayer.at(-1)!))).toEqual(['consent', 'update', { analytics_storage: 'denied' }]);
+  await page.reload();
+  await expect(page.locator('h1')).toBeVisible();
+  await expect(banner).toHaveCount(0);
+  expect(tagRequests).toHaveLength(2);
 });
 
 test.describe('browser language', () => {

@@ -363,6 +363,16 @@ html[dir=rtl] .hadith-progress span { transform-origin: right; }
 .toast { position: fixed; bottom: 24px; left: 50%; z-index: 45; width: max-content; max-width: calc(100vw - 32px); padding: 12px 20px; border: 1px solid #e2bd6e4d; border-radius: 14px; background: var(--night); color: var(--night-ink); font-size: 14px; line-height: 1.6; text-align: center; box-shadow: 0 12px 34px #0b143059; transform: translateX(-50%); animation: toast-in .3s ease-out; }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 10px); } }
 
+/* ---------- Analytics consent ---------- */
+.consent { position: fixed; z-index: 44; bottom: 20px; inset-inline-end: 20px; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 14px; width: min(440px, calc(100vw - 24px)); padding: 18px; border: 1px solid #e2bd6e4d; border-radius: 22px; background: #0b1430f5; color: var(--night-ink); box-shadow: 0 18px 44px #02061873; -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); animation: consent-in .35s ease-out; }
+@keyframes consent-in { from { opacity: 0; transform: translateY(14px); } }
+.consent-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 14px; background: #e2bd6e1f; color: var(--gold-bright); }
+.consent-icon svg { width: 20px; height: 20px; }
+.consent p { margin: 0; font-size: 14px; line-height: 1.6; }
+.consent-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.consent-decline { border: 1px solid #e2bd6e59; background: transparent; color: var(--night-ink); }
+.consent-decline:not(:disabled):hover { background: #ffffff14; }
+
 /* ---------- Pages ---------- */
 .page-section { padding-block: 44px 64px; }
 
@@ -561,6 +571,7 @@ html[dir=rtl] :is(h1, h2, h3) { line-height: 1.5; font-weight: 700; }
 html[lang=ur] { --body: 'Noto Nastaliq Urdu', 'Noto Naskh Arabic', serif; --display: 'Noto Nastaliq Urdu', 'Noto Naskh Arabic', serif; line-height: 1.95; }
 html[lang=ur] :is(h1, h2, h3, .button, .badge, .eyebrow, .text-button, .nav-link, .day-top, .next-relative, .card-action, .hero-intro, .next-fast > p, .section-heading p, .faq-item summary, .stat-caption, .log-row strong, .resource-category, .hadith-meaning, .share-link, .date-line) { line-height: 2; }
 html[lang=ur] .power-body p { line-height: 2.35; }
+html[lang=ur] .consent p { line-height: 2.1; }
 html[lang=ur] :is(h1, h2, h3) { font-weight: 600; }
 .salawat { font-family: var(--arabic); font-style: normal; font-weight: 400; line-height: 1; }
 html[lang=ur] .hero h1 { font-size: 40px; line-height: 1.9; }
@@ -636,6 +647,7 @@ html[dir=rtl] .hero h1 span, html[lang=bn] .hero h1 span { font-weight: 700; }
   .nav-link.active { background: #e2bd6e24; color: var(--gold-bright); }
   .site-footer { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
   .toast { bottom: calc(92px + env(safe-area-inset-bottom)); }
+  .consent { inset-inline: 12px; bottom: calc(92px + env(safe-area-inset-bottom)); width: auto; padding: 16px; }
 
   /* Hero */
   .hero-inner { gap: 22px; padding-block: 16px 70px; }

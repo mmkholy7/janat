@@ -1,4 +1,4 @@
-import { createIcons, MoonStar, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown, Gem, HandHeart, Shuffle } from 'lucide';
+import { createIcons, MoonStar, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown, Gem, HandHeart, Shuffle, Cookie } from 'lucide';
 import { addDays, calendarEventLinks, calendarInvite, calendarSubscriptionLinks, dateKey, fastDay, hijriDate, upcomingDays, type FastDay, type FastStatus } from './calendar';
 import { loadMessages, locales, verses, type Messages } from './i18n';
 import { detectLanguage, fontUrl, isLanguage, languageFromPath, languageInfo, languageLink, languagePath, languages, SITE_URL, type Language } from './languages';
@@ -9,16 +9,19 @@ import { collectionKeys, gradeKeys, hadithUrl, hadiths, type Hadith } from './ha
 import { composeDaysText, composeHadithText, shareLinks, shareNetworks, type ShareMessage, type ShareNetwork, type SharedHadith } from './share';
 import { brandIcon, brands } from './brands';
 import { renderShareImage, type ShareImageInput } from './share-image';
+import { applyConsent, saveConsent, storedConsent, type Consent } from './consent';
 import './theme.css';
 
 type View = 'home' | 'calendar' | 'logbook' | 'quran' | 'resources';
 type Preferences = { language: Language; adjustment: number; weekly: boolean; white: boolean; quranGoal: number };
 type QuranSession = { id: string; date: string; kind: 'recitation' | 'revision'; minutes: number; pages: number };
 const app = document.querySelector<HTMLDivElement>('#app')!;
-const icons = { MoonStar, Gem, HandHeart, Shuffle, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library };
+const icons = { MoonStar, Gem, HandHeart, Shuffle, Cookie, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library };
 const navIcons: Record<View, string> = { home: 'house', calendar: 'calendar-days', logbook: 'notebook-pen', quran: 'book-open', resources: 'library' };
 const shortLanguageNames: Partial<Record<Language, string>> = { ar: 'عربي', ur: 'اردو', bn: 'বাংলা', fa: 'فارسی' };
 let storageAvailable = true;
+applyConsent(storedConsent());
+let consentOpen = storedConsent() === null;
 function load(key: string): unknown {
   try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { storageAvailable = false; return null; }
 }
@@ -362,11 +365,25 @@ function render() {
     <nav aria-label="${text().mainNav}">${(['home', 'calendar', 'logbook', 'quran', 'resources'] as View[]).map(item => `<button class="nav-link ${view === item ? 'active' : ''}" data-view="${item}" ${view === item ? 'aria-current="page"' : ''}>${icon(navIcons[item])}<span>${text()[item]}</span></button>`).join('')}</nav>
     <div class="header-actions"><label class="language-select" title="${text().languageLabel}">${icon('globe')}<span class="language-current" aria-hidden="true">${shortLanguageNames[lang] ?? lang.toUpperCase()}</span><select id="language" aria-label="${text().languageLabel}">${languages.map(code => `<option value="${code}" lang="${code}" ${code === lang ? 'selected' : ''}>${languageInfo[code].name}</option>`).join('')}</select></label><button class="button primary header-reminder" data-action="reminders" aria-label="${text().reminders}" title="${text().reminders}">${icon('bell')}<span>${text().reminders}</span></button></div></div></header>
     <main id="main" tabindex="-1">${view === 'home' ? `${hero()}<div class="container">${stats()}${upcoming()}${hadithBanner()}${power()}<section class="future-band"><div class="future-icon">${icon('book-open')}</div><div><span class="eyebrow green">${text().recitation} & ${text().revision}</span><h2>${text().quran}</h2><p>${text().quranIntro}</p><button class="text-button" data-view="quran">${text().quranHistory}${icon('arrow-right')}</button></div><span class="future-decoration" lang="ar">اقرأ</span></section>${faqSection(text())}</div>` : `<div class="container">${view === 'calendar' ? calendarView() : view === 'resources' ? resourcesView() : view === 'quran' ? quranView() : logbookView()}</div>`}</main>
-    <footer class="site-footer"><div class="container footer-main"><span class="footer-brand">${icon('moon-star')}janat.</span><span>${text().footer}</span><button class="text-button" data-action="sources">${text().source}${icon('arrow-up-right')}</button><span class="privacy-footer">${icon('shield-check')}${text().privacyTitle}</span></div>
+    <footer class="site-footer"><div class="container footer-main"><span class="footer-brand">${icon('moon-star')}janat.</span><span>${text().footer}</span><button class="text-button" data-action="sources">${text().source}${icon('arrow-up-right')}</button><button class="text-button" data-action="consent-settings">${icon('cookie')}${text().consentSettings}</button><span class="privacy-footer">${icon('shield-check')}${text().privacyTitle}</span></div>
     <div class="container footer-languages"><span class="footer-languages-title">${icon('globe')}${text().languagesTitle}</span><ul>${languages.map(code => `<li><a href="${languageLink(code)}" hreflang="${code}" lang="${code}" data-language="${code}" ${code === lang ? 'aria-current="true"' : ''}>${languageInfo[code].name}</a></li>`).join('')}</ul></div></footer><dialog id="modal" aria-labelledby="modal-title"></dialog>`;
   bind(); createIcons({ icons }); markSalawat(app);
   setupHadith();
+  renderConsent();
   if (!storageAvailable) toast(text().storageError);
+}
+function renderConsent() {
+  const existing = document.querySelector<HTMLElement>('.consent');
+  if (consentOpen && existing?.dataset.lang === preferences.language) return;
+  existing?.remove();
+  if (!consentOpen) return;
+  const banner = document.createElement('section');
+  banner.className = 'consent'; banner.dataset.lang = preferences.language; banner.setAttribute('aria-label', text().consentSettings);
+  banner.innerHTML = `<span class="consent-icon">${icon('cookie')}</span><p>${text().consentText}</p><div class="consent-actions"><button class="button small consent-decline" data-action="consent-decline">${text().consentDecline}</button><button class="button small pale" data-action="consent-accept">${text().consentAccept}</button></div>`;
+  document.body.append(banner); bind(banner); createIcons({ icons });
+}
+function chooseConsent(consent: Consent) {
+  saveConsent(consent); consentOpen = false; renderConsent(); toast(text().saved);
 }
 function downloadFile(content: string, filename: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type })); const link = document.createElement('a'); link.href = url; link.download = filename; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -448,6 +465,8 @@ function bind(root: ParentNode = app) {
     if (action === 'reminders' || action === 'settings' || action === 'sources') openModal(action);
     if (action === 'record') openModal('record', button.dataset.date);
     if (action === 'close') closeModal();
+    if (action === 'consent-accept' || action === 'consent-decline') chooseConsent(action === 'consent-accept' ? 'granted' : 'denied');
+    if (action === 'consent-settings') { consentOpen = true; renderConsent(); document.querySelector<HTMLElement>('.consent button')?.focus(); }
     if (action === 'invite') openModal('calendar', button.dataset.date);
     if (action === 'download-single') exportCalendar(button.dataset.date);
     if (action === 'copy-feed') {
