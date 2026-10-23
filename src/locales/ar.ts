@@ -168,6 +168,7 @@ const ar: Messages = {
   play: 'تشغيل',
   previousHadith: 'الحديث السابق',
   nextHadith: 'الحديث التالي',
+  anotherHadith: 'حديث آخر',
   gradeSahih: 'صحيح',
   gradeHasan: 'حسن',
   collectionBukhari: 'صحيح البخاري',

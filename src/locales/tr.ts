@@ -168,6 +168,7 @@ const tr: Messages = {
   play: 'Oynat',
   previousHadith: 'Önceki hadis',
   nextHadith: 'Sonraki hadis',
+  anotherHadith: 'Başka bir hadis',
   gradeSahih: 'Sahîh',
   gradeHasan: 'Hasen',
   collectionBukhari: 'Sahîh-i Buhârî',

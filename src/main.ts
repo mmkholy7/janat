@@ -1,4 +1,4 @@
-import { createIcons, MoonStar, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown, Gem, HandHeart } from 'lucide';
+import { createIcons, MoonStar, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown, Gem, HandHeart, Shuffle } from 'lucide';
 import { addDays, calendarEventLinks, calendarInvite, calendarSubscriptionLinks, dateKey, fastDay, hijriDate, upcomingDays, type FastDay, type FastStatus } from './calendar';
 import { loadMessages, locales, verses, type Messages } from './i18n';
 import { detectLanguage, fontUrl, isLanguage, languageFromPath, languageInfo, languageLink, languagePath, languages, SITE_URL, type Language } from './languages';
@@ -6,7 +6,7 @@ import en from './locales/en';
 import { faqSection } from './faq';
 import { resources, type ResourceCategory } from './resources';
 import { collectionKeys, gradeKeys, hadithUrl, hadiths, type Hadith } from './hadith';
-import { composeDaysText, composeHadithText, shareLinks, shareNetworks, type ShareMessage, type ShareNetwork } from './share';
+import { composeDaysText, composeHadithText, shareLinks, shareNetworks, type ShareMessage, type ShareNetwork, type SharedHadith } from './share';
 import { brandIcon, brands } from './brands';
 import { renderShareImage, type ShareImageInput } from './share-image';
 import './theme.css';
@@ -15,7 +15,7 @@ type View = 'home' | 'calendar' | 'logbook' | 'quran' | 'resources';
 type Preferences = { language: Language; adjustment: number; weekly: boolean; white: boolean; quranGoal: number };
 type QuranSession = { id: string; date: string; kind: 'recitation' | 'revision'; minutes: number; pages: number };
 const app = document.querySelector<HTMLDivElement>('#app')!;
-const icons = { MoonStar, Gem, HandHeart, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library };
+const icons = { MoonStar, Gem, HandHeart, Shuffle, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library };
 const navIcons: Record<View, string> = { home: 'house', calendar: 'calendar-days', logbook: 'notebook-pen', quran: 'book-open', resources: 'library' };
 const shortLanguageNames: Partial<Record<Language, string>> = { ar: 'عربي', ur: 'اردو', bn: 'বাংলা', fa: 'فارسی' };
 let storageAvailable = true;
@@ -55,7 +55,7 @@ let hadithTimer = 0;
 let hadithStartedAt = 0;
 let hadithRemaining = HADITH_MS;
 let hadithObserver: IntersectionObserver | null = null;
-let shareSubject: { kind: 'days' } | { kind: 'hadith'; index: number } = { kind: 'days' };
+let shareSubject: { kind: 'days'; hadith: number } | { kind: 'hadith'; index: number } = { kind: 'days', hadith: 0 };
 let shareBlob: Blob | null = null;
 let shareImageUrl = '';
 let shareRequest = 0;
@@ -212,15 +212,19 @@ const attribute = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, 
 const shareUrl = () => `${SITE_URL}${languagePath(preferences.language)}`;
 const shareDays = () => upcomingDays(today(), 4, preferences.adjustment);
 const tagLabel = (reason: FastDay['reasons'][number]) => reason === 'white' ? text().white : text().weekly;
+/** Picks any hadith except the one currently shown, so "another hadith" always changes it. */
+const randomHadith = (except = -1) => {
+  const index = Math.floor(Math.random() * (except >= 0 ? hadiths.length - 1 : hadiths.length));
+  return except >= 0 && index >= except ? index + 1 : index;
+};
+const sharedHadith = (hadith: Hadith, separator: 'image' | 'text'): SharedHadith => ({
+  arabic: hadith.arabic, meaning: preferences.language === 'ar' ? undefined : text()[hadith.key],
+  reference: separator === 'text' ? `${hadithReference(hadith)} (${text()[gradeKeys[hadith.grade]]})` : `${hadithReference(hadith)} · ${text()[gradeKeys[hadith.grade]]}`,
+});
 function shareMessage(): ShareMessage {
-  if (shareSubject.kind === 'hadith') {
-    const hadith = hadiths[shareSubject.index];
-    const meaning = preferences.language === 'ar' ? undefined : text()[hadith.key];
-    return { title: text().hadithTitle, url: shareUrl(), text: composeHadithText({ arabic: hadith.arabic, meaning, reference: `${hadithReference(hadith)} (${text()[gradeKeys[hadith.grade]]})`, invite: text().shareInvite }) };
-  }
+  if (shareSubject.kind === 'hadith') return { title: text().hadithTitle, url: shareUrl(), text: composeHadithText({ ...sharedHadith(hadiths[shareSubject.index], 'text'), invite: text().shareInvite }) };
   const days = shareDays().map(day => ({ label: format(day.date, { weekday: 'long', day: 'numeric', month: 'long' }), detail: [hijriLabel(day.date, { day: 'numeric', month: 'long' }), ...day.reasons.map(tagLabel)].join(' · ') }));
-  const reason = hadiths.find(hadith => hadith.id === 'deeds-presented')!;
-  return { title: text().shareHeading, url: shareUrl(), text: composeDaysText({ heading: text().shareHeading, days, quote: `${text()[reason.key]} — ${hadithReference(reason)}`, invite: text().shareInvite }) };
+  return { title: text().shareHeading, url: shareUrl(), text: composeDaysText({ heading: text().shareHeading, days, hadith: sharedHadith(hadiths[shareSubject.hadith], 'text'), invite: text().shareInvite }) };
 }
 function shareImageInput(): ShareImageInput {
   const lang = preferences.language, style = getComputedStyle(document.documentElement);
@@ -229,11 +233,8 @@ function shareImageInput(): ShareImageInput {
     body: style.getPropertyValue('--body').trim() || 'sans-serif', display: style.getPropertyValue('--display').trim() || 'serif',
     site: `${new URL(SITE_URL).host}${languagePath(lang).replace(/\/$/, '')}`, invite: text().shareInvite,
   };
-  if (shareSubject.kind === 'hadith') {
-    const hadith = hadiths[shareSubject.index];
-    return { ...common, kind: 'hadith', title: text().hadithTitle, arabic: hadith.arabic, meaning: lang === 'ar' ? undefined : text()[hadith.key], reference: `${hadithReference(hadith)} · ${text()[gradeKeys[hadith.grade]]}` };
-  }
-  return { ...common, kind: 'days', heading: text().shareHeading, days: shareDays().map((day, index) => ({ weekday: format(day.date, { weekday: 'long' }), day: number(day.date.getDate()), month: format(day.date, { month: 'short' }), detail: hijriLabel(day.date), tags: day.reasons.map(reason => ({ kind: reason, label: tagLabel(reason) })), highlight: index === 0 })) };
+  if (shareSubject.kind === 'hadith') return { ...common, kind: 'hadith', title: text().hadithTitle, ...sharedHadith(hadiths[shareSubject.index], 'image') };
+  return { ...common, kind: 'days', heading: text().shareHeading, hadith: sharedHadith(hadiths[shareSubject.hadith], 'image'), days: shareDays().map((day, index) => ({ weekday: format(day.date, { weekday: 'long' }), day: number(day.date.getDate()), month: format(day.date, { month: 'short' }), detail: hijriLabel(day.date), tags: day.reasons.map(reason => ({ kind: reason, label: tagLabel(reason) })), highlight: index === 0 })) };
 }
 function shareFileName() { return shareSubject.kind === 'hadith' ? `janat-hadith-${hadiths[shareSubject.index].id}.jpg` : `janat-fasting-days-${dateKey(today())}.jpg`; }
 function shareContent() {
@@ -241,6 +242,7 @@ function shareContent() {
   const isHadith = shareSubject.kind === 'hadith';
   return `<span class="modal-icon">${icon('share-2')}</span><h2 id="modal-title">${isHadith ? text().shareHadith : text().shareDays}</h2><p>${isHadith ? text().shareHadithIntro : text().shareIntro}</p>
     <figure class="share-preview loading"><img alt="${text().shareImageAlt}" width="1080" height="1350" hidden></figure>
+    ${isHadith ? '' : `<button class="text-button share-shuffle" data-action="shuffle-hadith">${icon('shuffle')}${text().anotherHadith}</button>`}
     <button class="button primary full share-native" data-action="native-share" ${'share' in navigator ? '' : 'hidden'}>${icon('share-2')}${text().share}</button>
     <p class="share-via">${text().shareVia}</p>
     <div class="share-networks">${shareNetworks.map(network => `<a class="share-link" data-network="${network}" href="${attribute(links[network])}" ${network === 'email' ? '' : 'target="_blank" rel="noopener noreferrer"'}><span class="share-circle" style="--brand:${networkColors[network]}">${networkIcon(network)}</span><span>${networkLabels[network]()}</span></a>`).join('')}</div>
@@ -249,6 +251,8 @@ function shareContent() {
 async function prepareShareImage(dialog: HTMLDialogElement) {
   const request = ++shareRequest; shareBlob = null;
   const preview = dialog.querySelector<HTMLElement>('.share-preview');
+  const download = dialog.querySelector<HTMLButtonElement>('[data-action="download-share-image"]');
+  preview?.classList.add('loading'); if (download) download.disabled = true;
   try {
     const blob = await renderShareImage(shareImageInput());
     if (request !== shareRequest || activeModal !== 'share' || !preview?.isConnected) return;
@@ -257,7 +261,7 @@ async function prepareShareImage(dialog: HTMLDialogElement) {
     shareImageUrl = URL.createObjectURL(blob);
     const image = preview.querySelector('img')!; image.src = shareImageUrl; image.hidden = false;
     preview.classList.remove('loading');
-    dialog.querySelector<HTMLButtonElement>('[data-action="download-share-image"]')!.disabled = false;
+    if (download) download.disabled = false;
   } catch {
     if (request === shareRequest && preview) preview.hidden = true;
   }
@@ -275,6 +279,13 @@ async function nativeShare() {
   }
 }
 function openShare(subject: typeof shareSubject) { shareSubject = subject; openModal('share'); }
+function shuffleSharedHadith(dialog: HTMLDialogElement) {
+  if (shareSubject.kind !== 'days') return;
+  shareSubject = { kind: 'days', hadith: randomHadith(shareSubject.hadith) };
+  const links = shareLinks(shareMessage());
+  dialog.querySelectorAll<HTMLAnchorElement>('.share-link').forEach(link => { link.href = links[link.dataset.network as ShareNetwork]; });
+  void prepareShareImage(dialog);
+}
 function calendarView() {
   const start = new Date(month.getFullYear(), month.getMonth(), 1, 12);
   const shift = (start.getDay() + 6) % 7;
@@ -455,7 +466,8 @@ function bind(root: ParentNode = app) {
     if (action === 'delete-session') { quranSessions = quranSessions.filter(session => session.id !== button.dataset.id); persist('janat.quran', quranSessions); render(); toast(text().recorded); }
     if (action === 'reset-quran' && window.confirm(text().resetQuranConfirm)) { quranSessions = []; persist('janat.quran', quranSessions); render(); }
     if (action === 'reset' && window.confirm(text().resetConfirm)) { logbook = {}; persist('janat.logbook', logbook); closeModal(); render(); }
-    if (action === 'share-days') openShare({ kind: 'days' });
+    if (action === 'share-days') openShare({ kind: 'days', hadith: randomHadith() });
+    if (action === 'shuffle-hadith') shuffleSharedHadith(document.querySelector<HTMLDialogElement>('#modal')!);
     if (action === 'share-hadith') openShare({ kind: 'hadith', index: hadithIndex });
     if (action === 'hadith-prev' || action === 'hadith-next') showHadith(hadithIndex + (action === 'hadith-next' ? 1 : -1));
     if (action === 'hadith-toggle') toggleHadith(button);

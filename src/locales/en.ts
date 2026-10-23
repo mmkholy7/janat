@@ -166,6 +166,7 @@ const en = {
   play: 'Play',
   previousHadith: 'Previous hadith',
   nextHadith: 'Next hadith',
+  anotherHadith: 'Another hadith',
   gradeSahih: 'Sahih',
   gradeHasan: 'Hasan',
   collectionBukhari: 'Sahih al-Bukhari',

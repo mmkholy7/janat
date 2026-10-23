@@ -12,12 +12,16 @@ export function shorten(text: string, limit: number) {
   return `${(boundary > limit * .6 ? cut.slice(0, boundary) : cut).trimEnd()}…`;
 }
 
-export function composeDaysText({ heading, days, quote, invite }: { heading: string; days: { label: string; detail: string }[]; quote?: string; invite: string }) {
-  return [`🌙 ${heading}`, ...days.map(day => `• ${day.label} — ${day.detail}`), ...(quote ? ['', quote] : []), '', invite].join('\n');
+export type SharedHadith = { arabic: string; meaning?: string; reference: string };
+
+const hadithLines = ({ arabic, meaning, reference }: SharedHadith) => [arabic, ...(meaning ? ['', meaning] : []), `— ${reference}`];
+
+export function composeDaysText({ heading, days, hadith, invite }: { heading: string; days: { label: string; detail: string }[]; hadith?: SharedHadith; invite: string }) {
+  return [`🌙 ${heading}`, ...days.map(day => `• ${day.label} — ${day.detail}`), ...(hadith ? ['', ...hadithLines(hadith)] : []), '', invite].join('\n');
 }
 
-export function composeHadithText({ arabic, meaning, reference, invite }: { arabic: string; meaning?: string; reference: string; invite: string }) {
-  return [arabic, ...(meaning ? ['', meaning] : []), `— ${reference}`, '', invite].join('\n');
+export function composeHadithText({ invite, ...hadith }: SharedHadith & { invite: string }) {
+  return [...hadithLines(hadith), '', invite].join('\n');
 }
 
 export function shareLinks({ title, text, url }: ShareMessage): Record<ShareNetwork, string> {
