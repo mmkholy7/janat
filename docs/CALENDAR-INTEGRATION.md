@@ -25,15 +25,19 @@ The feed contains no logbook entries, session history, name, email, or token. It
 
 ## Cloudflare deployment
 
-The `functions/api/calendar.ts` handler must deploy with the frontend. Use Git-integrated Cloudflare Pages or run Wrangler from the repository root after building:
+The site runs as the `janat` Cloudflare Worker defined in `wrangler.jsonc`, which owns the `janat.uably.com` custom domain. `worker/index.ts` serves `/api/calendar` through the `functions/api/calendar.ts` handler and everything else from the built `dist/` assets.
+
+Every push to `main` deploys automatically through `.github/workflows/deploy.yml`, which runs the tests, builds, and runs `wrangler deploy`. To redeploy without a code change, open **Actions > Deploy to Cloudflare > Run workflow** on GitHub. The `CLOUDFLARE_API_TOKEN` repository secret needs the **Workers Scripts: Edit** permission, and `CLOUDFLARE_ACCOUNT_ID` must be set.
+
+To deploy by hand from the repository root:
 
 ```sh
 npm ci
 npm run build
-npx wrangler pages deploy dist --project-name YOUR_EXISTING_PROJECT --branch main
+npx wrangler deploy
 ```
 
-Wrangler automatically bundles the root `functions/` directory. Do not create a new Pages project just to update the existing custom domain. Cloudflare dashboard drag-and-drop uploads do not support Functions. A separate static host needs an equivalent server endpoint. A Workers-hosted site needs an explicit Workers adapter; this release targets Pages Functions, not a standalone Worker.
+Do not use `wrangler pages deploy`; a Pages project does not own the custom domain, so its deployments are not visible on janat.uably.com. A separate static host needs an equivalent server endpoint.
 
 After deployment verify:
 
