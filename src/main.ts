@@ -1,4 +1,4 @@
-import { createIcons, MoonStar, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown } from 'lucide';
+import { createIcons, MoonStar, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown, Gem, HandHeart } from 'lucide';
 import { addDays, calendarEventLinks, calendarInvite, calendarSubscriptionLinks, dateKey, fastDay, hijriDate, upcomingDays, type FastDay, type FastStatus } from './calendar';
 import { loadMessages, locales, verses, type Messages } from './i18n';
 import { detectLanguage, fontUrl, isLanguage, languageFromPath, languageInfo, languageLink, languagePath, languages, SITE_URL, type Language } from './languages';
@@ -15,7 +15,7 @@ type View = 'home' | 'calendar' | 'logbook' | 'quran' | 'resources';
 type Preferences = { language: Language; adjustment: number; weekly: boolean; white: boolean; quranGoal: number };
 type QuranSession = { id: string; date: string; kind: 'recitation' | 'revision'; minutes: number; pages: number };
 const app = document.querySelector<HTMLDivElement>('#app')!;
-const icons = { MoonStar, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library };
+const icons = { MoonStar, Gem, HandHeart, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library };
 const navIcons: Record<View, string> = { home: 'house', calendar: 'calendar-days', logbook: 'notebook-pen', quran: 'book-open', resources: 'library' };
 const shortLanguageNames: Partial<Record<Language, string>> = { ar: 'عربي', ur: 'اردو', bn: 'বাংলা', fa: 'فارسی' };
 let storageAvailable = true;
@@ -63,7 +63,6 @@ const availableFeeds = new Set<string>();
 let focusBeforeModal: HTMLElement | null = null;
 let copy: Messages = en;
 let languageRequest = 0;
-let videoObserver: IntersectionObserver | null = null;
 const text = () => copy;
 const today = () => new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 12);
 const icon = (name: string, extra = '') => `<i data-lucide="${name}" ${extra} aria-hidden="true"></i>`;
@@ -125,12 +124,13 @@ function upcoming() {
 }
 function power() {
   const cards = [
-    { file: 'salah', title: text().powerRewardsTitle, body: text().powerRewardsText },
-    { file: 'dua', title: text().powerDuaTitle, body: text().powerDuaText },
-    { file: 'dates', title: text().powerHealthTitle, body: text().powerHealthText },
+    { image: 'reward', icon: 'gem', title: text().powerRewardsTitle, body: text().powerRewardsText },
+    { image: 'dua', icon: 'hand-heart', title: text().powerDuaTitle, body: text().powerDuaText },
+    { image: 'dates', icon: 'sprout', title: text().powerHealthTitle, body: text().powerHealthText },
   ];
+  const photo = (name: string) => `<img src="/images/power/${name}-640.webp" srcset="/images/power/${name}-640.webp 640w, /images/power/${name}-1080.webp 1080w" sizes="(max-width: 760px) 300px, (max-width: 1120px) 31vw, 360px" width="1080" height="1440" alt="" loading="lazy" decoding="async">`;
   return `<section class="power-section"><div class="section-heading"><div><div class="eyebrow green">${text().tagline}</div><h2>${text().power}</h2><p>${text().powerIntro}</p></div></div>
-    <div class="power-grid">${cards.map((card, index) => `<article class="power-card" style="animation-delay:${index * 130}ms"><video src="/videos/${card.file}.mp4" poster="/videos/${card.file}.webp" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1"></video><div class="power-overlay"><h3>${card.title}</h3><p>${card.body}</p></div></article>`).join('')}</div></section>`;
+    <div class="power-grid">${cards.map((card, index) => `<article class="power-card" style="animation-delay:${index * 130}ms"><figure class="power-arch">${photo(card.image)}</figure><div class="power-body"><span class="power-medallion">${icon(card.icon)}</span><h3>${card.title}</h3><p>${card.body}</p></div></article>`).join('')}</div></section>`;
 }
 function hadithReference(hadith: Hadith) { return `${text()[collectionKeys[hadith.collection]]} ${hadith.number}`; }
 function hadithCount(index: number) { return text().hadithCount.replace('{n}', number(index + 1)).replace('{total}', number(hadiths.length)); }
@@ -327,17 +327,6 @@ function updateHead() {
   const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
   if (canonical) canonical.href = new URL(languagePath(lang), canonical.href).href;
 }
-function playVisibleVideos() {
-  videoObserver?.disconnect();
-  const videos = document.querySelectorAll<HTMLVideoElement>('.power-card video');
-  videos.forEach(video => { video.muted = true; });
-  if (!videos.length || matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return;
-  videoObserver = new IntersectionObserver(entries => entries.forEach(entry => {
-    const video = entry.target as HTMLVideoElement;
-    if (entry.isIntersecting) void video.play().catch(() => {}); else video.pause();
-  }), { rootMargin: '120px 0px' });
-  videos.forEach(video => videoObserver!.observe(video));
-}
 // Noto Nastaliq Urdu draws ﷺ about two lines tall, so every ﷺ outside Arabic text is set in Naskh.
 function markSalawat(root: Node) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -366,7 +355,6 @@ function render() {
     <div class="container footer-languages"><span class="footer-languages-title">${icon('globe')}${text().languagesTitle}</span><ul>${languages.map(code => `<li><a href="${languageLink(code)}" hreflang="${code}" lang="${code}" data-language="${code}" ${code === lang ? 'aria-current="true"' : ''}>${languageInfo[code].name}</a></li>`).join('')}</ul></div></footer><dialog id="modal" aria-labelledby="modal-title"></dialog>`;
   bind(); createIcons({ icons }); markSalawat(app);
   setupHadith();
-  playVisibleVideos();
   if (!storageAvailable) toast(text().storageError);
 }
 function downloadFile(content: string, filename: string, type: string) {
