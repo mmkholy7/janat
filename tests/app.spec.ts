@@ -431,6 +431,28 @@ test.describe('Ramadan companion', () => {
     expect(located.searchParams.has('city')).toBe(false);
   });
 
+  test('city timetable pages list every Ramadan day and open the companion for that city', async ({ page }, testInfo) => {
+    await page.goto('/fasting/ramadan-2027/');
+    await page.locator('#cities a', { hasText: 'London' }).click();
+    await expect(page).toHaveURL(/\/fasting\/ramadan-2027\/london\/$/);
+    await expect(page.locator('h1')).toHaveText('Ramadan 2027 timetable for London');
+    await expect(page.locator('.times-table tbody tr')).toHaveCount(29);
+    await expect(page.locator('.times-table tbody tr').first().locator('td')).toHaveText(['Mon 8 Feb', '5:51', '17:05']);
+    await expect(page.locator('#cities a[aria-current="page"]')).toHaveText('London');
+    expect(await fitsViewport(page)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath('ramadan-london.png'), fullPage: true });
+
+    await page.locator('#calendar .dates-only a').click();
+    await expect(page).toHaveURL(/:4173\/#ramadan$/);
+    await expect(page.locator('#ramadan-city')).toHaveValue('london');
+    await expect(page.locator('.time-tile strong')).toHaveText(['5:51', '17:05']);
+
+    await page.goto('/ur/fasting/ramadan-2027/karachi/');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await expect(page.locator('.times-table tbody tr')).toHaveCount(29);
+    expect(await fitsViewport(page)).toBe(true);
+  });
+
   test('keeps a 30-day Quran plan and counts make-up fasts on allowed days', async ({ page }) => {
     await page.goto('/#ramadan');
     const juz = page.locator('[data-action="juz"][data-juz="1"]');

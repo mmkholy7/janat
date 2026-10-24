@@ -56,6 +56,11 @@ async function copy(button: HTMLElement) {
 
 if (document.querySelector('[data-widget-builder]')) void import('./widget-builder');
 
+// Ramadan timetables mark today's row in the visitor's calendar.
+const now = new Date(), pad = (value: number) => String(value).padStart(2, '0');
+const todayRow = document.querySelector(`.times-table tr[data-date="${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}"]`);
+if (todayRow) { todayRow.classList.add('is-today'); todayRow.setAttribute('aria-current', 'date'); }
+
 const native = document.querySelector<HTMLButtonElement>('[data-action=native-share]');
 if (native && 'share' in navigator) native.hidden = false;
 
