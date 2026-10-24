@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowUpRight, Ban, CalendarDays, CalendarHeart, CalendarPlus, ChevronDown, Cookie, Copy, Download, Globe, Linkedin, Mail, Moon, MoonStar, Quote, Share2, ShieldCheck, Sparkles, Star, Sun } from 'lucide';
+import { ArrowRight, ArrowUpRight, Ban, CalendarDays, CalendarHeart, CalendarPlus, ChevronDown, CodeXml, Cookie, Copy, Download, Globe, Languages, Linkedin, Mail, Moon, MoonStar, Quote, Share2, ShieldCheck, SlidersHorizontal, Sparkles, Star, Sun } from 'lucide';
 import { brandIcon, brands } from './brands';
 import { addDays, calendarEventLinks, calendarInvite, calendarSubscriptionLinks, dateKey, fastDay, hijriDate } from './calendar';
 import { datesCopy, type DatesCopy } from './dates-copy';
@@ -9,11 +9,13 @@ import { messages } from './locales';
 import type { Messages } from './locales/en';
 import { escapeHtml, metaTags } from './seo';
 import { composeDaysText, shareLinks, shareNetworks, type ShareNetwork } from './share';
+import { widgetCopy } from './widget-copy';
+import { defaultWidget, WIDGET_HEIGHT, widgetSizes, widgetSnippet, widgetSrc } from './widget-snippet';
 
 // Build-time renderer for the crawlable fasting-date pages (/fasting/, /fasting/2027/, /fasting/2026-11/, /fasting/ramadan-2027/ …).
 // Each page is complete HTML with no app JavaScript; src/page.ts only adds consent, copy and native sharing.
 
-export type DateSubject = { kind: 'hub' } | { kind: 'year'; year: number } | { kind: 'month'; page: MonthPage } | { kind: 'occasion'; page: OccasionPage };
+export type DateSubject = { kind: 'hub' } | { kind: 'widget' } | { kind: 'year'; year: number } | { kind: 'month'; page: MonthPage } | { kind: 'occasion'; page: OccasionPage };
 export type DateSite = { today: Date; months: MonthPage[]; years: number[]; occasions: OccasionPage[]; allOccasions: OccasionPage[]; subjects: DateSubject[] };
 
 export function dateSite(now: Date): DateSite {
@@ -24,19 +26,19 @@ export function dateSite(now: Date): DateSite {
     today, months, years, occasions,
     // Occasions just outside the window still label days on the first and last month pages.
     allOccasions: occasionsBetween(addDays(start, -60), addDays(end, 60)),
-    subjects: [{ kind: 'hub' }, ...years.map(year => ({ kind: 'year', year }) as const), ...months.map(page => ({ kind: 'month', page }) as const), ...occasions.map(page => ({ kind: 'occasion', page }) as const)],
+    subjects: [{ kind: 'hub' }, { kind: 'widget' }, ...years.map(year => ({ kind: 'year', year }) as const), ...months.map(page => ({ kind: 'month', page }) as const), ...occasions.map(page => ({ kind: 'occasion', page }) as const)],
   };
 }
 
-export const subjectSlug = (subject: DateSubject) => subject.kind === 'hub' ? '' : subject.kind === 'year' ? String(subject.year) : subject.page.slug;
+export const subjectSlug = (subject: DateSubject) => subject.kind === 'hub' ? '' : subject.kind === 'widget' ? 'widget' : subject.kind === 'year' ? String(subject.year) : subject.page.slug;
 export const subjectUrl = (subject: DateSubject) => (language: Language) => `${SITE_URL}${datesPath(language, subjectSlug(subject))}`;
 
 // ---------- Icons (Lucide nodes serialized once, at build time) ----------
 type SvgNode = readonly [string, Readonly<Record<string, string | number | undefined>>, (readonly SvgNode[])?];
 const iconNodes = {
   'arrow-right': ArrowRight, 'arrow-up-right': ArrowUpRight, ban: Ban, 'calendar-days': CalendarDays, 'calendar-heart': CalendarHeart, 'calendar-plus': CalendarPlus,
-  'chevron-down': ChevronDown, cookie: Cookie, copy: Copy, download: Download, globe: Globe, linkedin: Linkedin, mail: Mail, moon: Moon, 'moon-star': MoonStar,
-  quote: Quote, 'share-2': Share2, 'shield-check': ShieldCheck, sparkles: Sparkles, star: Star, sun: Sun,
+  'chevron-down': ChevronDown, 'code-xml': CodeXml, cookie: Cookie, copy: Copy, download: Download, globe: Globe, languages: Languages, linkedin: Linkedin, mail: Mail, moon: Moon, 'moon-star': MoonStar,
+  quote: Quote, 'share-2': Share2, 'shield-check': ShieldCheck, 'sliders-horizontal': SlidersHorizontal, sparkles: Sparkles, star: Star, sun: Sun,
 } as const;
 type IconName = keyof typeof iconNodes;
 const serialize = ([tag, attributes, children = []]: SvgNode, extra = ''): string =>
@@ -108,7 +110,7 @@ type Formatters = ReturnType<typeof formatters>;
 type Context = { lang: Language; d: DatesCopy; m: Messages; f: Formatters; site: DateSite; subject: DateSubject; t: (value: string) => string };
 type Crumb = { name: string; href: string; url: string };
 type ShareDay = { label: string; detail: string };
-type PageModel = { h1: string; title: string; description: string; eyebrow: string; crumbs: Crumb[]; action: string; main: string };
+type PageModel = { h1: string; title: string; description: string; eyebrow: string; crumbs: Crumb[]; action: string; main: string; actions?: string };
 
 const attribute = escapeHtml;
 const fill = (template: string, values: Record<string, string>) => template.replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match);
@@ -366,8 +368,56 @@ function hubModel(c: Context): PageModel {
     crumbs: baseCrumbs(c),
     main: `<section class="dates-section" aria-labelledby="coming-title">${sectionHeading(t(d.comingUp), 'coming-title', { eyebrow: t(m.nextDays), glyph: 'sparkles', intro: t(m.adjustHint) })}<div class="dates-cards">${items.map(item => item.html).join('')}</div></section>
       <section class="dates-section" aria-labelledby="months-title">${sectionHeading(t(d.byMonth), 'months-title', { eyebrow: t(years), glyph: 'calendar-days' })}${byYear.map(group => `<h3 class="dates-year-heading"><a href="${href(c, String(group.year))}">${t(fill(d.yearTitle, { year: f.number(group.year) }))}${icon('arrow-right')}</a></h3>${monthCards(c, group.months)}`).join('')}</section>
-      ${addSection(c)}${hadithSection(c, sunnahHadith)}${shareSection(c, d.hubTitle, items.map(item => item.share))}
+      ${addSection(c)}${hadithSection(c, sunnahHadith)}${shareSection(c, d.hubTitle, items.map(item => item.share))}${widgetPromo(c)}
       ${linkRow(c, [...otherYears(c).map(link => ({ ...link, label: fill(d.yearTitle, { year: link.label }) })), ...occasionLinks(c)], d.allDates)}`,
+  };
+}
+
+// ---------- Website widget ----------
+function widgetPromo(c: Context) {
+  const { d, t } = c;
+  return `<section class="dates-section"><a class="widget-promo" href="${href(c, 'widget')}"><span class="icon-tile">${icon('code-xml')}</span><span class="widget-promo-text"><strong>${t(d.widgetTitle)}</strong><small>${t(d.feature4)}</small></span><span class="text-button">${t(d.getCode)}${icon('arrow-right')}</span></a></section>`;
+}
+
+function widgetModel(c: Context): PageModel {
+  const { d, f, t, lang } = c;
+  const options = defaultWidget(lang);
+  const snippet = widgetSnippet(options, { language: lang, title: widgetCopy[lang].title });
+  const choice = (name: string, value: string, label: string, checked: boolean, detail = '') =>
+    `<label class="segment"><input type="radio" name="${name}" value="${value}"${checked ? ' checked' : ''}><span>${t(label)}${detail ? `<small dir="ltr">${t(detail)}</small>` : ''}</span></label>`;
+  const group = (legend: string, choices: string) => `<fieldset class="builder-field"><legend>${t(legend)}</legend><div class="segmented">${choices}</div></fieldset>`;
+  const px = (value: number) => `${f.number(value)} px`;
+  const sizeLabels = { sidebar: d.sizeSidebar, card: d.sizeCard, full: d.sizeFull } as const;
+  const width = widgetSizes[options.size];
+  const features: [IconName, string, string][] = [['languages', d.feature1Title, d.feature1], ['moon', d.feature2Title, d.feature2], ['calendar-plus', d.feature3Title, d.feature3], ['shield-check', d.feature4Title, d.feature4]];
+  const steps = [[d.step1Title, d.step1], [d.step2Title, d.step2], [d.step3Title, d.step3]];
+  return {
+    h1: d.widgetTitle, title: d.widgetSeoTitle, description: d.widgetLead, eyebrow: d.widgetEyebrow, action: d.getCode,
+    crumbs: [...baseCrumbs(c), crumb(c, d.widgetNav, 'widget')],
+    actions: `<a class="button pale" href="#builder">${icon('code-xml')}${t(d.getCode)}</a><a class="button dates-ghost" href="${href(c)}">${icon('calendar-days')}${t(d.allDates)}</a>`,
+    main: `<section class="dates-section" id="builder" aria-labelledby="builder-title">${sectionHeading(t(d.builderTitle), 'builder-title', { eyebrow: t(d.widgetEyebrow), glyph: 'sliders-horizontal', intro: t(d.builderIntro) })}
+      <div class="builder" data-widget-builder data-lang="${lang}">
+        <form class="builder-controls" aria-labelledby="builder-title">
+          <label class="builder-field"><span class="builder-label">${t(d.widgetLanguage)}</span><select name="lang"><option value="auto">${t(d.autoLanguage)}</option>${languages.map(code => `<option value="${code}" lang="${code}"${code === lang ? ' selected' : ''}>${languageInfo[code].name}</option>`).join('')}</select></label>
+          ${group(d.view, choice('view', 'month', d.viewMonth, options.view === 'month') + choice('view', 'list', d.viewList, options.view === 'list'))}
+          ${group(d.theme, choice('theme', 'auto', d.themeAuto, options.theme === 'auto') + choice('theme', 'light', d.themeLight, options.theme === 'light') + choice('theme', 'dark', d.themeDark, options.theme === 'dark'))}
+          ${group(d.size, (['sidebar', 'card', 'full'] as const).map(size => choice('size', size, sizeLabels[size], options.size === size, widgetSizes[size] ? px(widgetSizes[size]!) : '100%')).join(''))}
+          <label class="builder-field"><span class="builder-label">${t(d.height)}<output name="height-value" dir="ltr">${px(options.height)}</output></span><input type="range" name="height" min="${WIDGET_HEIGHT.min}" max="${WIDGET_HEIGHT.max}" step="10" value="${options.height}"></label>
+        </form>
+        <div class="builder-preview">
+          <span class="builder-label">${t(d.preview)}</span>
+          <div class="builder-stage"><iframe src="${widgetSrc(options, '')}" title="${attribute(`${widgetCopy[lang].title} · Janat`)}" style="${width ? `max-width:${width}px;` : ''}height:${options.height}px"></iframe></div>
+        </div>
+        <div class="builder-code">
+          <label class="builder-label" for="widget-code">${t(d.code)}</label>
+          <textarea id="widget-code" readonly dir="ltr" rows="5" spellcheck="false">${escapeHtml(snippet)}</textarea>
+          <div class="dates-actions"><button type="button" class="button primary" data-action="copy" data-target="#widget-code" data-copied="${attribute(d.codeCopied)}">${icon('copy')}${t(d.copyCode)}</button></div>
+          <p class="copy-status fine-print" role="status"></p>
+        </div>
+      </div></section>
+      <section class="dates-section" aria-labelledby="features-title">${sectionHeading(t(d.featuresTitle), 'features-title', { eyebrow: t(d.widgetNav), glyph: 'sparkles' })}<ul class="widget-features">${features.map(([glyph, title, body]) => `<li><span class="icon-tile">${icon(glyph)}</span><h3>${t(title)}</h3><p>${t(body)}</p></li>`).join('')}</ul></section>
+      <section class="dates-section" aria-labelledby="steps-title">${sectionHeading(t(d.stepsTitle), 'steps-title', { eyebrow: t(d.getCode), glyph: 'code-xml' })}<ol class="widget-steps">${steps.map(([title, body], index) => `<li><span class="widget-step-number" aria-hidden="true">${f.number(index + 1)}</span><h3>${t(title)}</h3><p>${t(body)}</p></li>`).join('')}</ol></section>
+      ${linkRow(c, [{ href: href(c), label: d.hubTitle }, ...otherYears(c).map(link => ({ ...link, label: fill(d.yearTitle, { year: link.label }) })), ...occasionLinks(c)], d.allDates)}`,
   };
 }
 
@@ -393,10 +443,10 @@ function shell(c: Context, model: PageModel) {
     <main id="main" tabindex="-1"><section class="static-hero dates-hero${model.main.includes('dates-summary') ? ' has-summary' : ''}"><div class="container">
       <nav class="dates-breadcrumb" aria-label="${attribute(d.breadcrumb)}"><ol>${crumbs}</ol></nav>
       <p class="eyebrow light">${icon('moon-star')}${t(model.eyebrow)}</p><h1>${t(model.h1)}</h1><p class="hero-intro">${t(model.description)}</p>
-      <div class="dates-hero-actions"><a class="button pale" href="#calendar">${icon('calendar-plus')}${t(model.action)}</a><a class="button dates-ghost" href="#share">${icon('share-2')}${t(m.share)}</a></div>
+      <div class="dates-hero-actions">${model.actions ?? `<a class="button pale" href="#calendar">${icon('calendar-plus')}${t(model.action)}</a><a class="button dates-ghost" href="#share">${icon('share-2')}${t(m.share)}</a>`}</div>
     </div></section>
     <div class="container dates-body">${model.main}</div></main>
-    <footer class="site-footer"><div class="container footer-main"><span class="footer-brand">${icon('moon-star')}janat.</span><span>${t(m.footer)}</span><a class="text-button" href="${href(c)}">${icon('calendar-days')}${t(d.nav)}</a><button type="button" class="text-button" data-action="consent-settings">${icon('cookie')}${t(m.consentSettings)}</button><span class="privacy-footer">${icon('shield-check')}${t(m.privacyTitle)}</span></div>
+    <footer class="site-footer"><div class="container footer-main"><span class="footer-brand">${icon('moon-star')}janat.</span><span>${t(m.footer)}</span><a class="text-button" href="${href(c)}">${icon('calendar-days')}${t(d.nav)}</a><a class="text-button" href="${href(c, 'widget')}"${c.subject.kind === 'widget' ? ' aria-current="page"' : ''}>${icon('code-xml')}${t(d.widgetNav)}</a><button type="button" class="text-button" data-action="consent-settings">${icon('cookie')}${t(m.consentSettings)}</button><span class="privacy-footer">${icon('shield-check')}${t(m.privacyTitle)}</span></div>
     <div class="container footer-languages"><span class="footer-languages-title">${icon('globe')}${t(m.languagesTitle)}</span><ul>${languages.map(code => `<li><a href="${datesPath(code, slug)}" hreflang="${code}" lang="${code}"${code === lang ? ' aria-current="true"' : ''}>${languageInfo[code].name}</a></li>`).join('')}</ul></div></footer>
     <section class="consent" aria-label="${attribute(m.consentSettings)}" hidden><span class="consent-icon">${icon('cookie')}</span><p>${t(m.consentText)}</p><div class="consent-actions"><button type="button" class="button small consent-decline" data-action="consent-decline">${t(m.consentDecline)}</button><button type="button" class="button small pale" data-action="consent-accept">${t(m.consentAccept)}</button></div></section>
   </div>`;
@@ -405,6 +455,7 @@ function shell(c: Context, model: PageModel) {
 function model(c: Context): PageModel {
   const subject = c.subject;
   if (subject.kind === 'hub') return hubModel(c);
+  if (subject.kind === 'widget') return widgetModel(c);
   if (subject.kind === 'year') return yearModel(c, subject.year);
   if (subject.kind === 'month') return monthModel(c, subject.page);
   return occasionModel(c, subject.page);

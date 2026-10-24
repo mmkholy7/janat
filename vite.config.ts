@@ -92,7 +92,7 @@ export default defineConfig({
   plugins: [calendarFeed, datePagesDev, localizedDevHtml, localizedPages],
   build: {
     rollupOptions: {
-      input: { index: 'index.html', page: 'src/page.ts' },
+      input: { index: 'index.html', page: 'src/page.ts', embed: 'embed/index.html' },
     },
   },
 });

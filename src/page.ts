@@ -1,6 +1,6 @@
 import { applyConsent, saveConsent, storedConsent, type Consent } from './consent';
 
-// The only script on the pre-rendered fasting-date pages: analytics consent, copy buttons and the native share sheet.
+// The only script on the pre-rendered fasting-date pages: analytics consent, copy buttons, the native share sheet and the widget builder.
 
 const consent = document.querySelector<HTMLElement>('.consent');
 const stored = storedConsent();
@@ -37,7 +37,8 @@ function legacyCopy(value: string) {
 }
 
 async function copy(button: HTMLElement) {
-  const input = button.parentElement?.querySelector<HTMLInputElement>('input');
+  const target = button.dataset.target ? document.querySelector(button.dataset.target) : button.parentElement?.querySelector('input');
+  const input = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement ? target : undefined;
   const value = button.dataset.value ?? input?.value ?? '';
   let copied = false;
   try {
@@ -52,6 +53,8 @@ async function copy(button: HTMLElement) {
     if (button.dataset.error) announce(button, button.dataset.error);
   }
 }
+
+if (document.querySelector('[data-widget-builder]')) void import('./widget-builder');
 
 const native = document.querySelector<HTMLButtonElement>('[data-action=native-share]');
 if (native && 'share' in navigator) native.hidden = false;

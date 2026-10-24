@@ -339,6 +339,49 @@ test('fasting-date pages answer “when are the White Days?” in every language
   expect(errors).toEqual([]);
 });
 
+test('other websites can embed the fasting calendar and copy its code', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/embed/?lang=ur');
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  await expect(page.locator('h1')).toContainText('اکتوبر');
+  const fast = page.locator('a[href*="add=2026-10-22"]').first();
+  await expect(fast).toHaveAttribute('target', '_blank');
+  await expect(fast).toHaveAttribute('href', /^https:\/\/janat\.uably\.com\/ur\/\?add=2026-10-22&utm_source=widget&utm_medium=widget$/);
+  await expect(page.locator('[data-go="today"]')).toBeHidden();
+  await page.locator('[data-go="1"]').click();
+  await expect(page.locator('h1')).toContainText('نومبر');
+  await page.locator('[data-go="today"]').click();
+  await expect(page.locator('h1')).toContainText('اکتوبر');
+  await expect(page.locator('[data-go="today"]')).toBeHidden();
+  expect(await fitsViewport(page)).toBe(true);
+
+  await page.goto('/embed/?view=list&theme=dark');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('.row')).toHaveCount(6);
+  await expect(page.locator('.add-all')).toHaveAttribute('href', /\?add=2026-10-19&to=2026-10-29&/);
+
+  await page.goto('/fasting/');
+  await page.locator('.widget-promo').click();
+  await expect(page).toHaveURL(/\/fasting\/widget\/$/);
+  await expect(page.locator('h1')).toHaveText('Add a Sunnah fasting calendar to your website');
+  const preview = page.locator('.builder-stage iframe');
+  const code = page.locator('#widget-code');
+  await expect(preview).toHaveAttribute('src', '/embed/?lang=en');
+  await page.locator('select[name="lang"]').selectOption('auto');
+  await page.getByRole('radio', { name: 'Upcoming fasts' }).check();
+  await page.getByRole('radio', { name: /Sidebar/ }).check();
+  await expect(preview).toHaveAttribute('src', '/embed/?view=list');
+  await expect(page.frameLocator('.builder-stage iframe').locator('.row')).toHaveCount(6);
+  expect(await preview.evaluate(frame => getComputedStyle(frame).maxWidth)).toBe('320px');
+  await expect(code).toHaveValue(/src="https:\/\/janat\.uably\.com\/embed\/\?view=list".*max-width:320px;height:600px/);
+  await expect(code).toHaveValue(/<a href="https:\/\/janat\.uably\.com\/fasting\/">Sunnah fasting calendar · Janat<\/a>/);
+  await page.getByRole('button', { name: 'Copy code' }).click();
+  await expect(page.locator('.builder-code .copy-status')).toHaveText('Code copied');
+  expect(await fitsViewport(page)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('going back keeps the language the visitor chose', async ({ page }) => {
   await page.goto('/ur/');
   await page.locator('nav [data-view="calendar"]').click();
