@@ -221,6 +221,7 @@ const fr: Messages = {
   hadithFeedFasting: 'Le Prophète ﷺ a dit : « Quiconque donne à un jeûneur de quoi rompre son jeûne aura une récompense semblable à la sienne, sans que la récompense du jeûneur n’en soit diminuée en rien. »',
   hadithFalseSpeech: 'Le Prophète ﷺ a dit : « Celui qui ne délaisse pas la parole mensongère et le fait d’agir selon elle, Allah n’a nul besoin qu’il délaisse sa nourriture et sa boisson. »',
   hadithFriday: 'Le Prophète ﷺ a dit : « Que nul d’entre vous ne jeûne le vendredi, à moins de jeûner aussi la veille ou le lendemain. »',
+  datesNav: 'Dates de jeûne',
 };
 
 export default fr;

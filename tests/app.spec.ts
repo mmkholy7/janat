@@ -298,6 +298,47 @@ test('each language has its own crawlable address', async ({ page }) => {
   await expect(page).toHaveTitle(/Sunnah Fasting Calendar/);
 });
 
+test('fasting-date pages answer “when are the White Days?” in every language', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.locator('.site-footer a[href="/fasting/"]').click();
+  await expect(page).toHaveURL(/\/fasting\/$/);
+  await expect(page.locator('h1')).toHaveText('White Days & Sunnah fasting dates');
+  await expect(page.locator('.consent')).toBeHidden();
+  expect(await fitsViewport(page)).toBe(true);
+
+  await page.locator('.dates-month', { hasText: 'November' }).first().click();
+  await expect(page).toHaveURL(/\/fasting\/2026-11\/$/);
+  await page.waitForLoadState();
+  await expect(page.locator('h1')).toHaveText('Sunnah fasting days in November 2026');
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://janat.uably.com/fasting/2026-11/');
+  await expect(page.locator('link[rel="alternate"][hreflang]')).toHaveCount(languages.length + 1);
+  await expect(page.locator('.dates-table tbody tr')).toHaveCount(11);
+  await expect(page.locator('.dates-table .white-row')).toHaveCount(3);
+  await expect(page.locator('.calendar-cell.white-day:not(.outside)')).toHaveCount(3);
+  expect(await fitsViewport(page)).toBe(true);
+
+  await page.locator('[data-action="consent-settings"]').click();
+  await expect(page.locator('.consent')).toBeVisible();
+  await page.locator('[data-action="consent-decline"]').click();
+  await expect(page.locator('.consent')).toBeHidden();
+
+  await page.locator('a[href*="?add="]').click();
+  const dialog = page.locator('#modal');
+  await expect(dialog).toHaveAttribute('data-kind', 'add-days');
+  await expect(dialog.locator('.add-day').first()).toHaveText(/Monday 2 November/);
+
+  await page.goto('/fasting/2026-11/');
+  await page.locator('.footer-languages a[hreflang="ur"]').click();
+  await expect(page).toHaveURL(/\/ur\/fasting\/2026-11\/$/);
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  await page.locator('.dates-links a[href="/ur/fasting/ramadan-2027/"]').click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ur');
+  await expect(page.locator('.dates-fact.ramadan').first()).toContainText('8 فروری');
+  expect(await fitsViewport(page)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('going back keeps the language the visitor chose', async ({ page }) => {
   await page.goto('/ur/');
   await page.locator('nav [data-view="calendar"]').click();

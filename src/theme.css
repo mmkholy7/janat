@@ -813,6 +813,225 @@ html[lang=ur] .hero h1 { font-size: 40px; }
 @media (max-width: 760px) { html[lang=ur] .hero h1 { font-size: 32px; } html[lang=ur] .next-fast h2 { font-size: 26px; } html[lang=ur] .nav-link { font-size: 10.5px; } }
 @media (max-width: 374px) { html[lang=ur] .hero h1 { font-size: 30px; } }
 
+/* ---------- Fasting-date pages (pre-rendered /fasting/… for search) ---------- */
+.dates-shell [hidden] { display: none !important; }
+.dates-shell .header-inner { justify-content: space-between; }
+.dates-shell .header-inner::after { content: none; }
+.dates-shell .header-actions { margin-inline-start: auto; }
+.dates-header-link { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 0 14px; border: 1px solid var(--night-line); border-radius: 999px; font-size: 14px; font-weight: 500; color: var(--night-ink); transition: background .2s; }
+.dates-header-link:hover { background: #ffffff14; }
+.dates-header-link svg { width: 16px; height: 16px; color: var(--gold-bright); }
+html[dir=rtl] :is(.dates-shell .header-actions .button, .dates-card-more, .dates-year-heading) svg { transform: scaleX(-1); }
+
+.dates-hero { position: relative; isolation: isolate; overflow: hidden; padding: 40px 0 56px; }
+.dates-hero.has-summary { padding-bottom: 88px; }
+html[dir=rtl] .dates-hero { background-image: linear-gradient(270deg, #080e22e6, #080e2280), image-set(url('/images/mountains.webp') type('image/webp'), url('/images/mountains.jpg') type('image/jpeg')); }
+.dates-hero::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--stars); opacity: .28; pointer-events: none; }
+.dates-hero::after { content: ''; position: absolute; z-index: -1; top: 34px; inset-inline-end: max(24px, calc((100% - 1200px) / 2)); width: 88px; height: 88px; background: var(--crescent) center / contain no-repeat; opacity: .5; pointer-events: none; }
+html[dir=rtl] .dates-hero::after { transform: scaleX(-1); }
+.dates-hero h1 { max-width: 24ch; margin-top: 10px; font-size: clamp(32px, 4.2vw, 50px); line-height: 1.18; text-wrap: balance; }
+.dates-hero .hero-intro { max-width: 64ch; margin-top: 14px; text-wrap: pretty; }
+.dates-hero-actions { display: flex; flex-wrap: wrap; gap: 10px 12px; margin-top: 26px; }
+.dates-ghost { border: 1px solid #e2bd6e66; background: #ffffff0d; color: var(--night-ink); }
+.dates-ghost:not(:disabled):hover { background: #ffffff1f; }
+.dates-ghost svg { color: var(--gold-bright); }
+nav.dates-breadcrumb { position: static; display: block; margin: 0 0 18px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.dates-breadcrumb ol { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0; padding: 0; list-style: none; font-size: 13.5px; color: var(--night-muted); }
+.dates-breadcrumb li { display: inline-flex; align-items: center; gap: 8px; }
+.dates-breadcrumb li + li::before { content: '/'; opacity: .45; }
+.dates-breadcrumb a { text-underline-offset: 3px; transition: color .2s; }
+.dates-breadcrumb a:hover { color: var(--night-ink); text-decoration: underline; }
+.dates-breadcrumb [aria-current] { font-weight: 600; color: var(--gold-bright); }
+.static-dates { margin-top: 24px; }
+
+.dates-body { padding-bottom: 64px; }
+.dates-section { padding-top: 56px; }
+.dates-body > .dates-section:first-child { padding-top: 44px; }
+.dates-body > .dates-summary:first-child { position: relative; z-index: 1; margin-top: -48px; padding-top: 0; }
+
+/* Key facts */
+.dates-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.dates-fact { display: flex; align-items: flex-start; gap: 16px; min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+.dates-fact-body { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
+.dates-fact h3 { font-family: var(--body); font-size: 13.5px; font-weight: 600; line-height: 1.5; color: var(--muted); }
+.dates-fact-value { font-family: var(--display); font-size: 22px; font-weight: 600; line-height: 1.3; color: var(--ink); }
+.dates-fact-detail { font-size: 13.5px; line-height: 1.6; color: var(--muted); }
+.dates-fact .badge, .dates-fact .text-button { margin-top: 6px; }
+.dates-fact .text-button { padding-block: 2px; }
+.dates-fact.white { border-color: var(--moon-line); background: linear-gradient(160deg, var(--surface) 30%, var(--moon-soft)); }
+.dates-fact.white .icon-tile { background: var(--moon-soft); color: var(--moon); }
+.dates-fact.white .dates-fact-value { color: var(--moon); }
+.dates-fact.special { border-color: var(--line-strong); background: linear-gradient(160deg, var(--surface) 30%, var(--gold-soft)); }
+.dates-fact.ramadan { position: relative; overflow: hidden; border-color: #e2bd6e66; background: linear-gradient(160deg, var(--night-2), var(--night) 75%); color: var(--night-ink); }
+.dates-fact.ramadan::before { content: ''; position: absolute; inset: 0; background: var(--stars); opacity: .35; pointer-events: none; }
+.dates-fact.ramadan > * { position: relative; }
+.dates-fact.ramadan .icon-tile { background: #e2bd6e24; color: var(--gold-bright); }
+.dates-fact.ramadan :is(h3, .dates-fact-detail) { color: var(--night-muted); }
+.dates-fact.ramadan .dates-fact-value { color: var(--night-ink); }
+.dates-fact.ramadan .text-button { color: var(--gold-bright); }
+.dates-fact.no-fast .icon-tile { background: var(--rose-soft); color: var(--rose); }
+.badge.no-fast { background: var(--rose-soft); color: var(--rose); }
+.badge.special { background: var(--gold-text); color: var(--surface); }
+.badge.ramadan { background: var(--night); color: var(--gold-bright); }
+
+/* Month calendar + table */
+.dates-month-grid { padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow); }
+.dates-month-grid .calendar-cell { min-height: 86px; }
+.dates-month-grid .calendar-cell.special-day { border-color: var(--gold); background: linear-gradient(160deg, var(--gold-soft), var(--surface)); box-shadow: inset 0 0 0 1px var(--gold); }
+.dates-month-grid .calendar-cell.ramadan-day { border-color: #e2bd6e59; background: linear-gradient(160deg, var(--night-2), var(--night)); color: var(--night-ink); }
+.dates-month-grid .calendar-cell.ramadan-day :is(.cell-date small, .cell-indicator) { color: var(--gold-bright); }
+.dates-month-grid .calendar-cell.no-fast-day { border-style: dashed; border-color: var(--rose); background: var(--rose-soft); }
+.dates-month-grid .calendar-cell.no-fast-day .cell-indicator { color: var(--rose); }
+.dates-month-grid + .calendar-legend { margin-top: 16px; }
+.legend-dot.special { background: var(--gold-soft); border: 2px solid var(--gold); }
+.legend-dot.ramadan { background: var(--night-2); border-color: #e2bd6e80; }
+.legend-dot.no-fast { background: var(--rose-soft); border: 1px dashed var(--rose); }
+.dates-table-wrap { margin-top: 24px; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+.dates-table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.dates-table :is(th, td) { padding: 13px 18px; text-align: start; vertical-align: middle; }
+.dates-table thead th { background: var(--raised); font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+html:is([dir=rtl], [lang=bn]) .dates-table thead th { letter-spacing: 0; text-transform: none; font-size: 13.5px; }
+.dates-table tbody tr { border-top: 1px solid var(--line); }
+.dates-table tbody th { font-weight: 600; }
+.dates-table td { color: var(--muted); }
+.dates-table a { color: var(--gold-text); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+.dates-table a:hover { text-decoration-color: currentColor; }
+.dates-table .white-row { background: color-mix(in srgb, var(--moon-soft) 60%, transparent); }
+.dates-table .white-row th { color: var(--moon); }
+.dates-table .special-row { background: color-mix(in srgb, var(--gold-soft) 70%, transparent); }
+.dates-table .past :is(th, td) { opacity: .55; }
+.dates-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.dates-pager { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
+.dates-pager-link { display: flex; flex-direction: column; gap: 2px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); transition: border-color .2s, background .2s; }
+.dates-pager-link:hover { border-color: var(--line-strong); background: var(--raised); }
+.dates-pager-link span { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.dates-pager-link strong { font-family: var(--display); font-size: 17px; font-weight: 600; color: var(--gold-text); }
+.dates-pager-link.next { grid-column: 2; text-align: end; }
+
+/* Add to calendar */
+.dates-add { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: start; gap: 20px; }
+.dates-add > :only-child { grid-column: 1 / -1; max-width: 720px; }
+.dates-add .subscription-options { margin-top: 0; }
+:is(.dates-only, .dates-event) { padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
+:is(.dates-only, .dates-event) h3 { font-size: 17px; line-height: 1.45; }
+.dates-event h3 { margin-top: 10px; }
+.dates-only > p { margin-top: 6px; font-size: 14px; line-height: 1.75; color: var(--muted); }
+.dates-event-range { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; font-family: var(--display); font-size: 20px; font-weight: 600; color: var(--gold-text); }
+.dates-event-range small { font-family: var(--body); font-size: 13.5px; font-weight: 500; color: var(--muted); }
+.dates-event .provider-choices { margin-block: 14px 0; }
+.dates-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.copy-status:empty { display: none; }
+.copy-status { color: var(--gold-text); font-weight: 600; }
+
+/* Hadith (all visible, no carousel) */
+.dates-hadith-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 22px; }
+.dates-hadith-item { display: flex; flex-direction: column; justify-content: space-between; gap: 16px; min-width: 0; padding: 22px; border: 1px solid var(--night-line); border-radius: 18px; background: #ffffff08; }
+.dates-hadith-item:last-child:nth-child(3n + 1):not(:first-child) { grid-column: 1 / -1; }
+.dates-hadith-item blockquote { display: grid; gap: 12px; margin: 0; }
+.dates-hadith .hadith-arabic { font-size: clamp(19px, 1.8vw, 23px); line-height: 1.95; }
+.dates-hadith .hadith-meaning { font-size: 15.5px; line-height: 1.7; }
+.dates-hadith-item figcaption { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px 12px; font-size: 13px; color: var(--night-muted); }
+
+/* Share */
+.dates-share-card { padding: 24px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow); }
+.dates-share-card .share-networks { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); margin-top: 0; }
+.dates-share-card .dates-actions { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+
+/* Links between pages */
+.dates-more { padding-top: 44px; }
+.dates-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.dates-chip { display: inline-flex; align-items: center; min-height: 38px; padding: 6px 15px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); font-size: 14px; font-weight: 500; transition: border-color .2s, background .2s; }
+.dates-chip:hover { border-color: var(--gold); background: var(--raised); }
+.dates-chip[aria-current] { border-color: var(--night); background: var(--night); color: var(--night-ink); }
+.dates-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.dates-card { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 20px 20px 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); transition: transform .25s, box-shadow .25s; }
+.dates-card-label { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 600; color: var(--gold-text); }
+.dates-card-label svg { width: 16px; height: 16px; }
+.dates-card strong { margin-top: 4px; font-family: var(--display); font-size: 21px; font-weight: 600; line-height: 1.3; }
+.dates-card small { font-size: 13px; line-height: 1.6; color: var(--muted); }
+.dates-card-more { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: auto -20px 0; padding: 14px 20px; border-top: 1px solid var(--line); font-size: 13.5px; font-weight: 600; color: var(--gold-text); }
+.dates-card strong + small + .dates-card-more { margin-top: 14px; }
+.dates-card-more svg { width: 15px; height: 15px; }
+.dates-card.white { border-color: var(--moon-line); background: linear-gradient(170deg, var(--surface) 35%, var(--moon-soft)); }
+.dates-card.white :is(.dates-card-label, strong) { color: var(--moon); }
+.dates-card.special { border-color: var(--line-strong); background: linear-gradient(170deg, var(--surface) 35%, var(--gold-soft)); }
+.dates-card.ramadan { position: relative; overflow: hidden; border-color: #e2bd6e66; background: linear-gradient(160deg, var(--night-2), var(--night) 75%); color: var(--night-ink); }
+.dates-card.ramadan::before { content: ''; position: absolute; inset: 0; background: var(--stars); opacity: .35; pointer-events: none; }
+.dates-card.ramadan > * { position: relative; }
+.dates-card.ramadan :is(.dates-card-label, .dates-card-more) { color: var(--gold-bright); }
+.dates-card.ramadan small { color: var(--night-muted); }
+.dates-card.ramadan .dates-card-more { border-color: var(--night-line); }
+.dates-year-heading { margin-block: 32px 14px; font-size: 22px; }
+.dates-year-heading a { display: inline-flex; align-items: center; gap: 8px; transition: color .2s; }
+.dates-year-heading a:hover { color: var(--gold-text); }
+.dates-year-heading svg { color: var(--gold-text); }
+.dates-months { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.dates-month { display: flex; flex-direction: column; gap: 4px; height: 100%; padding: 16px 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); transition: border-color .2s, transform .2s, box-shadow .2s; }
+.dates-month strong { font-family: var(--display); font-size: 18px; font-weight: 600; }
+.dates-month span { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--moon); }
+.dates-month span svg { width: 15px; height: 15px; }
+.dates-month small { font-size: 12.5px; line-height: 1.6; color: var(--muted); }
+@media (hover: hover) {
+  .dates-card:hover, .dates-month:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+  .dates-month:hover { border-color: var(--moon-line); }
+}
+html[lang=ur] :is(.dates-fact-value, .dates-fact h3, .dates-fact-detail, .dates-card strong, .dates-card small, .dates-month strong, .dates-month span, .dates-event-range, .dates-pager-link strong, .dates-table th, .dates-table td, .dates-chip, .dates-breadcrumb, .dates-header-link, .dates-card-more, .dates-card-label) { line-height: 2; }
+html[lang=ur] .dates-hero h1 { font-size: clamp(28px, 3.4vw, 40px); line-height: 1.9; }
+html[lang=fa] .dates-hero h1 { line-height: 1.5; }
+
+@media (max-width: 760px) {
+  .dates-shell .site-footer { padding-bottom: env(safe-area-inset-bottom); }
+  .dates-shell .consent { bottom: calc(12px + env(safe-area-inset-bottom)); }
+  .dates-header-link { width: 38px; min-height: 38px; padding: 0; }
+  .dates-header-link span { display: none; }
+  .dates-hero { padding: 24px 0 40px; background-image: linear-gradient(0deg, #080e22f2, #080e2299), image-set(url('/images/mountains-1080.webp') type('image/webp'), url('/images/mountains.jpg') type('image/jpeg')); background-position: 60% center; }
+  html[dir=rtl] .dates-hero { background-image: linear-gradient(0deg, #080e22f2, #080e2299), image-set(url('/images/mountains-1080.webp') type('image/webp'), url('/images/mountains.jpg') type('image/jpeg')); }
+  .dates-hero::after { display: none; }
+  .dates-hero h1 { font-size: 30px; }
+  html[lang=ur] .dates-hero h1 { font-size: 27px; }
+  .dates-hero .hero-intro { margin-bottom: 0; font-size: 15px; }
+  .dates-hero-actions { margin-top: 20px; }
+  .dates-hero-actions .button { flex: 1 1 auto; }
+  .dates-breadcrumb ol { font-size: 13px; }
+  .dates-section { padding-top: 40px; }
+  .dates-hero.has-summary { padding-bottom: 76px; }
+  .dates-body > .dates-summary:first-child { margin-top: -44px; }
+  .dates-facts { gap: 10px; }
+  .dates-fact { gap: 14px; padding: 16px; }
+  .dates-fact .icon-tile { width: 40px; height: 40px; border-radius: 12px; }
+  .dates-fact-value { font-size: 20px; }
+  .dates-month-grid { padding: 8px; border-radius: 18px; }
+  .dates-month-grid .calendar-cell { min-height: 56px; }
+  .dates-pager { gap: 8px; }
+  .dates-pager-link { padding: 12px 14px; }
+  .dates-pager-link strong { font-size: 15.5px; }
+  .dates-add { grid-template-columns: minmax(0, 1fr); }
+  :is(.dates-only, .dates-event) { padding: 18px; }
+  .dates-actions .button { flex: 1 1 auto; }
+  .dates-hadith-list { grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 18px; }
+  .dates-hadith-item { padding: 18px 16px; }
+  .dates-hadith-item:last-child:nth-child(3n + 1) { grid-column: auto; }
+  .dates-share-card { padding: 18px; border-radius: 22px; }
+  .dates-share-card .share-networks { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .dates-months { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .dates-month { padding: 12px 14px; }
+  .dates-month strong { font-size: 16px; }
+  .dates-month span { font-size: 13px; }
+  .dates-cards { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .dates-year-heading { font-size: 20px; }
+}
+/* Phones: each table row becomes a two-line entry so nothing scrolls sideways. */
+@media (max-width: 600px) {
+  .dates-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .dates-table tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 12px; padding: 12px 14px; }
+  .dates-table tbody tr:first-child { border-top: 0; }
+  .dates-table :is(tbody th, td) { padding: 0; }
+  .dates-table tbody th { grid-column: 1; }
+  .dates-table td:nth-child(2) { grid-column: 1; font-size: 13px; }
+  .dates-table td:last-child { grid-column: 2; grid-row: 1 / span 2; }
+  .dates-table .dates-tags { flex-direction: column; align-items: flex-end; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }

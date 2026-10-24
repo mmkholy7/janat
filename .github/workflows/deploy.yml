@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Monthly rebuild so the pre-rendered fasting-date pages roll forward to the next months.
+  schedule:
+    - cron: '0 3 1 * *'
 
 concurrency:
   group: deploy-production

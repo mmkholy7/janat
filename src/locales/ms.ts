@@ -221,6 +221,7 @@ const ms: Messages = {
   hadithFeedFasting: 'Nabi ﷺ bersabda: “Sesiapa yang memberi makan kepada orang yang berpuasa untuk berbuka, dia akan mendapat pahala seperti pahala orang itu, tanpa dikurangkan sedikit pun pahala orang yang berpuasa itu.”',
   hadithFalseSpeech: 'Nabi ﷺ bersabda: “Sesiapa yang tidak meninggalkan perkataan dusta dan beramal dengannya, maka Allah tidak berhajat kepada perbuatannya meninggalkan makanan dan minumannya.”',
   hadithFriday: 'Nabi ﷺ bersabda: “Janganlah seorang pun daripada kamu berpuasa pada hari Jumaat, kecuali dia juga berpuasa sehari sebelumnya atau sehari selepasnya.”',
+  datesNav: 'Tarikh puasa',
 };
 
 export default ms;
