@@ -450,7 +450,11 @@ function ramadanPlace(): RamadanPlace {
 }
 const placeName = (place: RamadanPlace) => place.city ? cityName(place.city, preferences.language) : text().myLocation;
 const methodName = (method: MethodId) => text()[`method${method}`];
-const clock = (date: Date, timeZone: string) => new Intl.DateTimeFormat(locales[preferences.language], { hour: 'numeric', minute: '2-digit', timeZone }).format(date);
+const clock = (date: Date, timeZone: string) => {
+  const time = new Intl.DateTimeFormat(locales[preferences.language], { hour: 'numeric', minute: '2-digit', timeZone }).format(date);
+  // Urdu writes "5:51 AM"; isolate it so right-to-left text doesn't flip it to "AM 5:51".
+  return languageInfo[preferences.language].dir === 'rtl' && /[A-Za-z]/.test(time) ? `\u2068${time}\u2069` : time;
+};
 function zoneLabel(timeZone: string) {
   if (timeZone === deviceTimeZone()) return '';
   try { return new Intl.DateTimeFormat(locales[preferences.language], { timeZone, timeZoneName: 'shortOffset' }).formatToParts(new Date()).find(part => part.type === 'timeZoneName')?.value ?? ''; } catch { return ''; }
@@ -882,8 +886,20 @@ async function init() {
   if (languageFromPath(location.pathname) !== (language === 'en' ? undefined : language) && ['/', '/index.html', `/${requested}/`].includes(location.pathname)) {
     history.replaceState(history.state, '', `${languagePath(language)}${location.search}${location.hash}`);
   }
+  useSharedCity();
   render();
   openSharedDays();
+}
+/** City timetable pages link to ?city=london#ramadan, which picks that city (with its usual method), then the address is tidied. */
+function useSharedCity() {
+  const params = new URLSearchParams(location.search);
+  const id = params.get('city');
+  if (id === null) return;
+  params.delete('city');
+  const query = params.toString();
+  history.replaceState(history.state, '', `${location.pathname}${query ? `?${query}` : ''}${location.hash}`);
+  const city = findCity(id);
+  if (city) { ramadanSettings = { city: city.id }; persist('janat.ramadan', ramadanSettings); }
 }
 const validKey = (value: string | null): value is string => !!value && /^\d{4}-\d{2}-\d{2}$/.test(value) && dateKey(parseDate(value)) === value;
 /** A shared link (?add=day or ?add=from&to=to) opens the add-to-calendar sheet, then the address is tidied. */

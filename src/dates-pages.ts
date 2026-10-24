@@ -1,21 +1,24 @@
-import { ArrowRight, ArrowUpRight, Ban, CalendarDays, CalendarHeart, CalendarPlus, ChevronDown, CodeXml, Cookie, Copy, Download, Globe, Languages, Linkedin, Mail, Moon, MoonStar, Quote, Share2, ShieldCheck, SlidersHorizontal, Sparkles, Star, Sun } from 'lucide';
+import { ArrowRight, ArrowUpRight, Ban, CalendarDays, CalendarHeart, CalendarPlus, ChevronDown, CodeXml, Cookie, Copy, Download, Globe, Hourglass, Languages, Linkedin, Mail, Moon, MoonStar, Quote, Share2, ShieldCheck, SlidersHorizontal, Sparkles, Star, Sun, Sunrise, Sunset } from 'lucide';
 import { brandIcon, brands } from './brands';
 import { addDays, calendarEventLinks, calendarInvite, calendarSubscriptionLinks, dateKey, fastDay, hijriDate } from './calendar';
+import { cities, cityName, type City } from './cities';
 import { datesCopy, type DatesCopy } from './dates-copy';
 import { fastsBetween, marker, monthPages, noFastMarkers, occasionPages, occasionsBetween, pageWindow, specialFastMarkers, whiteGroups, yearPages, type DatedFast, type Fact, type Marker, type MonthPage, type OccasionPage, type WhiteGroup } from './dates';
 import { collectionKeys, gradeKeys, hadiths, hadithUrl } from './hadith';
 import { datesPath, languageInfo, languageLink, languagePath, languages, SITE_URL, type Language } from './languages';
 import { messages } from './locales';
 import type { Messages } from './locales/en';
+import { fastTimes, type FastTimes } from './prayer-times';
+import { ramadanDaysBetween } from './ramadan';
 import { escapeHtml, metaTags } from './seo';
 import { composeDaysText, shareLinks, shareNetworks, type ShareNetwork } from './share';
 import { widgetCopy } from './widget-copy';
 import { defaultWidget, WIDGET_HEIGHT, widgetSizes, widgetSnippet, widgetSrc } from './widget-snippet';
 
-// Build-time renderer for the crawlable fasting-date pages (/fasting/, /fasting/2027/, /fasting/2026-11/, /fasting/ramadan-2027/ …).
+// Build-time renderer for the crawlable fasting-date pages (/fasting/, /fasting/2027/, /fasting/2026-11/, /fasting/ramadan-2027/, /fasting/ramadan-2027/london/ …).
 // Each page is complete HTML with no app JavaScript; src/page.ts only adds consent, copy and native sharing.
 
-export type DateSubject = { kind: 'hub' } | { kind: 'widget' } | { kind: 'year'; year: number } | { kind: 'month'; page: MonthPage } | { kind: 'occasion'; page: OccasionPage };
+export type DateSubject = { kind: 'hub' } | { kind: 'widget' } | { kind: 'year'; year: number } | { kind: 'month'; page: MonthPage } | { kind: 'occasion'; page: OccasionPage } | { kind: 'city'; page: OccasionPage; city: City };
 export type DateSite = { today: Date; months: MonthPage[]; years: number[]; occasions: OccasionPage[]; allOccasions: OccasionPage[]; subjects: DateSubject[] };
 
 export function dateSite(now: Date): DateSite {
@@ -26,19 +29,22 @@ export function dateSite(now: Date): DateSite {
     today, months, years, occasions,
     // Occasions just outside the window still label days on the first and last month pages.
     allOccasions: occasionsBetween(addDays(start, -60), addDays(end, 60)),
-    subjects: [{ kind: 'hub' }, { kind: 'widget' }, ...years.map(year => ({ kind: 'year', year }) as const), ...months.map(page => ({ kind: 'month', page }) as const), ...occasions.map(page => ({ kind: 'occasion', page }) as const)],
+    subjects: [{ kind: 'hub' }, { kind: 'widget' }, ...years.map(year => ({ kind: 'year', year }) as const), ...months.map(page => ({ kind: 'month', page }) as const), ...occasions.map(page => ({ kind: 'occasion', page }) as const),
+      // Suhoor and iftar timetables for each city, for every Ramadan that has not ended yet.
+      ...occasions.filter(page => page.kind === 'ramadan' && dateKey(page.end) >= dateKey(today)).flatMap(page => cities.map(city => ({ kind: 'city', page, city }) as const))],
   };
 }
 
-export const subjectSlug = (subject: DateSubject) => subject.kind === 'hub' ? '' : subject.kind === 'widget' ? 'widget' : subject.kind === 'year' ? String(subject.year) : subject.page.slug;
+export const subjectSlug = (subject: DateSubject) => subject.kind === 'hub' ? '' : subject.kind === 'widget' ? 'widget' : subject.kind === 'year' ? String(subject.year) : subject.kind === 'city' ? citySlug(subject.page, subject.city) : subject.page.slug;
+const citySlug = (page: OccasionPage, city: City) => `${page.slug}/${city.id}`;
 export const subjectUrl = (subject: DateSubject) => (language: Language) => `${SITE_URL}${datesPath(language, subjectSlug(subject))}`;
 
 // ---------- Icons (Lucide nodes serialized once, at build time) ----------
 type SvgNode = readonly [string, Readonly<Record<string, string | number | undefined>>, (readonly SvgNode[])?];
 const iconNodes = {
   'arrow-right': ArrowRight, 'arrow-up-right': ArrowUpRight, ban: Ban, 'calendar-days': CalendarDays, 'calendar-heart': CalendarHeart, 'calendar-plus': CalendarPlus,
-  'chevron-down': ChevronDown, 'code-xml': CodeXml, cookie: Cookie, copy: Copy, download: Download, globe: Globe, languages: Languages, linkedin: Linkedin, mail: Mail, moon: Moon, 'moon-star': MoonStar,
-  quote: Quote, 'share-2': Share2, 'shield-check': ShieldCheck, 'sliders-horizontal': SlidersHorizontal, sparkles: Sparkles, star: Star, sun: Sun,
+  'chevron-down': ChevronDown, 'code-xml': CodeXml, cookie: Cookie, copy: Copy, download: Download, globe: Globe, hourglass: Hourglass, languages: Languages, linkedin: Linkedin, mail: Mail, moon: Moon, 'moon-star': MoonStar,
+  quote: Quote, 'share-2': Share2, 'shield-check': ShieldCheck, 'sliders-horizontal': SlidersHorizontal, sparkles: Sparkles, star: Star, sun: Sun, sunrise: Sunrise, sunset: Sunset,
 } as const;
 type IconName = keyof typeof iconNodes;
 const serialize = ([tag, attributes, children = []]: SvgNode, extra = ''): string =>
@@ -69,6 +75,9 @@ function formatters(language: Language) {
   const g = (date: Date, options: Intl.DateTimeFormatOptions) => dateFormat(gregory, options).format(date);
   const h = (date: Date, options: Intl.DateTimeFormatOptions) => era(dateFormat(islamic, options).format(date));
   const numbers = new Intl.NumberFormat(gregory, { useGrouping: false });
+  // Arabic reads "13 ساعة 4 دقائق" more naturally than the abbreviated "13 س 4 د".
+  const unit = (name: 'hour' | 'minute') => new Intl.NumberFormat(gregory, { style: 'unit', unit: name, unitDisplay: language === 'ar' ? 'long' : 'short' });
+  const hours = unit('hour'), minutes = unit('minute');
   const list = new Intl.ListFormat(base, { type: 'conjunction' });
   const same = (start: Date, end: Date) => dateKey(start) === dateKey(end);
   return {
@@ -77,6 +86,16 @@ function formatters(language: Language) {
     monthYear: (date: Date) => g(date, { month: 'long', year: 'numeric' }),
     month: (date: Date) => g(date, { month: 'long' }),
     weekdayShort: (date: Date) => g(date, { weekday: 'short' }),
+    /** "Mon 8 Feb", for timetable rows */
+    dayShort: (date: Date) => g(date, { weekday: 'short', day: 'numeric', month: 'short' }),
+    /** A clock time where the city is, like the app's ("05:51", "5:51 AM"). */
+    time: (date: Date, timeZone: string) => {
+      const text = dateFormat(gregory, { hour: 'numeric', minute: '2-digit', timeZone }).format(date);
+      // Urdu writes "5:51 AM"; isolate it so right-to-left text doesn't flip it to "AM 5:51".
+      return languageInfo[language].dir === 'rtl' && /[A-Za-z]/.test(text) ? `\u2068${text}\u2069` : text;
+    },
+    /** "13 hrs 4 mins" */
+    duration: (ms: number) => { const total = Math.round(ms / 60000); return `${hours.format(Math.floor(total / 60))} ${minutes.format(total % 60)}`; },
     /** "Monday 2 November 2026" */
     full: (date: Date) => g(date, { weekday: 'long', ...dayMonthYear }),
     /** "Monday 2 November" */
@@ -175,10 +194,12 @@ function providerChoices(c: Context, links: Record<string, string>) {
   return `<div class="provider-choices" role="group" aria-label="${attribute(c.m.calendarProvider)}">${Object.entries(links).map(([provider, url]) => `<a class="provider-link" data-provider="${provider}" href="${attribute(url)}" target="_blank" rel="noopener noreferrer">${icon('calendar-days')}<span>${labels[provider]}</span>${icon('arrow-up-right')}</a>`).join('')}</div>`;
 }
 
-function subscription(c: Context) {
-  const { m, t, lang } = c;
-  const feed = `${SITE_URL}/api/calendar?${new URLSearchParams({ activity: 'fast', lang, adjustment: '0', weekly: 'true', white: 'true' })}`;
-  return `<section class="subscription-options"><span class="badge recommended">${icon('sparkles')}${t(m.recommended)}</span><h3>${t(m.subscribeAll)}</h3><p class="subscription-body">${t(m.subscribeAllBody)}</p>${providerChoices(c, calendarSubscriptionLinks(feed, 'Janat'))}<details class="feed-link"><summary>${t(m.otherCalendarApps)}${icon('chevron-down')}</summary><div class="feed-url-row"><input class="subscription-url" aria-label="${attribute(m.subscriptionUrl)}" dir="ltr" readonly value="${attribute(feed)}"><button type="button" class="icon-button" data-action="copy" data-copied="${attribute(m.calendarUrlCopied)}" data-error="${attribute(m.clipboardError)}" aria-label="${attribute(m.copyCalendarUrl)}" title="${attribute(m.copyCalendarUrl)}">${icon('copy')}</button></div><p class="copy-status fine-print" role="status"></p></details><p class="fine-print">${t(m.feedNote)}</p></section>`;
+type Subscription = { feed: string; title: string; body: string };
+const fastSubscription = (c: Context): Subscription => ({ feed: `${SITE_URL}/api/calendar?${new URLSearchParams({ activity: 'fast', lang: c.lang, adjustment: '0', weekly: 'true', white: 'true' })}`, title: c.m.subscribeAll, body: c.m.subscribeAllBody });
+
+function subscription(c: Context, { feed, title, body }: Subscription = fastSubscription(c)) {
+  const { m, t } = c;
+  return `<section class="subscription-options"><span class="badge recommended">${icon('sparkles')}${t(m.recommended)}</span><h3>${t(title)}</h3><p class="subscription-body">${t(body)}</p>${providerChoices(c, calendarSubscriptionLinks(feed, 'Janat'))}<details class="feed-link"><summary>${t(m.otherCalendarApps)}${icon('chevron-down')}</summary><div class="feed-url-row"><input class="subscription-url" aria-label="${attribute(m.subscriptionUrl)}" dir="ltr" readonly value="${attribute(feed)}"><button type="button" class="icon-button" data-action="copy" data-copied="${attribute(m.calendarUrlCopied)}" data-error="${attribute(m.clipboardError)}" aria-label="${attribute(m.copyCalendarUrl)}" title="${attribute(m.copyCalendarUrl)}">${icon('copy')}</button></div><p class="copy-status fine-print" role="status"></p></details><p class="fine-print">${t(m.feedNote)}</p></section>`;
 }
 
 const icsLink = (c: Context, ics: string, fileName: string) => `<a class="button outline" href="data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}" download="${fileName}">${icon('download')}${c.t(c.d.icsFile)}</a>`;
@@ -218,6 +239,17 @@ function linkRow(c: Context, links: { href: string; label: string; current?: boo
 }
 
 const otherYears = (c: Context) => c.site.years.map(year => ({ href: href(c, String(year)), label: c.f.number(year), current: c.subject.kind === 'year' && c.subject.year === year }));
+const citySubjects = (c: Context, page: OccasionPage) => c.site.subjects.filter((subject): subject is Extract<DateSubject, { kind: 'city' }> => subject.kind === 'city' && subject.page === page);
+
+/** Links to every city's timetable for one Ramadan. */
+function citySection(c: Context, page: OccasionPage) {
+  const { d, t, f } = c;
+  const links = citySubjects(c, page);
+  if (!links.length) return '';
+  const current = c.subject.kind === 'city' ? c.subject.city.id : undefined;
+  return `<section class="dates-section dates-cities" id="cities" aria-labelledby="cities-title">${sectionHeading(t(d.citiesTitle), 'cities-title', { eyebrow: t(occasionName(c, page)), glyph: 'sunset', intro: t(fill(d.citiesIntro, { year: f.number(page.year) })) })}<ul class="dates-links">${links.map(({ city }) => `<li><a class="dates-chip" href="${href(c, citySlug(page, city))}"${city.id === current ? ' aria-current="page"' : ''}>${t(cityName(city, c.lang))}</a></li>`).join('')}</ul></section>`;
+}
+
 const occasionLinks = (c: Context) => c.site.occasions.map(page => ({ href: href(c, page.slug), label: occasionName(c, page), current: c.subject.kind === 'occasion' && c.subject.page.slug === page.slug }));
 
 // ---------- Month pages ----------
@@ -305,7 +337,46 @@ function occasionModel(c: Context, page: OccasionPage): PageModel {
     h1, title: fill(d[`${page.kind}SeoTitle`], values), description, eyebrow, action: m.setReminder,
     crumbs: [...baseCrumbs(c), ...yearCrumb(c, page.year), crumb(c, occasionName(c, page), page.slug)],
     main: `<section class="dates-section dates-summary">${factCards(c, page.facts.map(fact => factCard(c, fact, page, false)))}</section>
-      ${addSection(c, event)}${hadithSection(c, occasionHadith[page.kind])}${shareSection(c, h1, page.facts.map(fact => ({ label: d[fact.label], detail: `${fact.end ? f.range(fact.start, fact.end) : f.full(fact.start)} · ${fact.end ? f.hijriRange(fact.start, fact.end) : f.hijri(fact.start)}${fact.noFast ? ` · ${d.noFasting}` : ''}` })))}
+      ${citySection(c, page)}${addSection(c, event)}${hadithSection(c, occasionHadith[page.kind])}${shareSection(c, h1, page.facts.map(fact => ({ label: d[fact.label], detail: `${fact.end ? f.range(fact.start, fact.end) : f.full(fact.start)} · ${fact.end ? f.hijriRange(fact.start, fact.end) : f.hijri(fact.start)}${fact.noFast ? ` · ${d.noFasting}` : ''}` })))}
+      ${linkRow(c, [{ href: href(c), label: d.allDates }, ...(month ? [{ href: href(c, month.slug), label: fill(d.monthTitle, { month: f.monthYear(month.start) }) }] : []), ...occasionLinks(c)], d.allDates)}`,
+  };
+}
+
+// ---------- Ramadan timetables by city ----------
+function cityModel(c: Context, page: OccasionPage, city: City): PageModel {
+  const { d, m, f, t, lang } = c;
+  const rows = ramadanDaysBetween(page.start, page.end).map(day => ({ day, times: fastTimes(day.date, city.lat, city.lng, city.method) }));
+  const first = rows[0], last = rows[rows.length - 1];
+  const time = (date: Date | undefined) => date ? f.time(date, city.tz) : '—';
+  const length = (times: FastTimes | null) => times ? f.duration(times.maghrib.getTime() - times.fajr.getTime()) : '—';
+  const times = (row: typeof first) => `${m.suhoorEnds} ${time(row.times?.fajr)} · ${m.iftar} ${time(row.times?.maghrib)}`;
+  const name = cityName(city, lang), method = m[`method${city.method}`];
+  const values = { ...occasionValues(c, page), city: name, method, fajr: time(first.times?.fajr), maghrib: time(first.times?.maghrib) };
+  const h1 = fill(d.cityTitle, values);
+  const eid = page.facts.find(fact => fact.label === 'eidFitr');
+  const cards: Card[] = [
+    { glyph: 'moon-star', tone: 'ramadan', label: d.firstDay, value: f.full(first.day.date), detail: times(first) },
+    { glyph: 'moon-star', tone: 'ramadan', label: d.lastDay, value: f.full(last.day.date), detail: times(last) },
+    { glyph: 'hourglass', tone: 'weekly', label: d.fastLength, value: `${length(first.times)} – ${length(last.times)}`, detail: d.fastLengthDetail },
+    ...(eid ? [factCard(c, eid, page, false)] : []),
+  ];
+  const table = `<div class="dates-table-wrap"><table class="times-table" aria-labelledby="timetable-title"><thead><tr><th scope="col">${t(m.dayColumn)}</th><th scope="col">${t(m.dateColumn)}</th><th scope="col">${icon('sunrise')}${t(m.suhoorEnds)}</th><th scope="col">${icon('sunset')}${t(m.iftar)}</th></tr></thead><tbody>${rows.map(({ day, times: row }) => `<tr data-date="${day.key}"><th scope="row">${f.number(day.day)}</th><td>${t(f.dayShort(day.date))}</td><td>${t(time(row?.fajr))}</td><td>${t(time(row?.maghrib))}</td></tr>`).join('')}</tbody></table></div>`;
+  const feed = `${SITE_URL}/api/calendar?${new URLSearchParams({ activity: 'ramadan', lang, adjustment: '0', method: city.method, city: city.id })}`;
+  const companion = `<section class="dates-only"><h3>${t(m.ramadanBandTitle)}</h3><p>${t(m.ramadanBandLead)}</p><div class="dates-actions"><a class="button outline" href="${languageLink(lang)}?city=${city.id}#ramadan">${icon('moon-star')}${t(m.ramadanBandCta)}</a></div></section>`;
+  const month = monthOf(c, page.start);
+  return {
+    h1, title: fill(d.citySeoTitle, values), description: fill(d.cityLead, values), eyebrow: f.hijriMonth(page.main), action: m.setReminder,
+    crumbs: [...baseCrumbs(c), ...yearCrumb(c, page.year), crumb(c, occasionName(c, page), page.slug), crumb(c, name, citySlug(page, city))],
+    actions: `<a class="button pale" href="#calendar">${icon('calendar-plus')}${t(m.setReminder)}</a><a class="button dates-ghost" href="#timetable">${icon('sunset')}${t(m.timetable)}</a>`,
+    main: `<section class="dates-section dates-summary">${factCards(c, cards)}</section>
+      <section class="dates-section" id="timetable" aria-labelledby="timetable-title">${sectionHeading(t(m.timetable), 'timetable-title', { eyebrow: t(`${name} · ${method}`), glyph: 'sunset', intro: t(m.timesNote) })}${table}<p class="fine-print dates-note">${t(m.ramadanSighting)}</p></section>
+      <section class="dates-section" id="calendar" aria-labelledby="calendar-title">${sectionHeading(t(m.subscribeTimes), 'calendar-title', { eyebrow: t(m.reminders), glyph: 'calendar-plus', intro: t(m.feedPrivacy) })}<div class="dates-add">${subscription(c, { feed, title: `${name} · ${method}`, body: m.subscribeTimesBody })}${companion}</div></section>
+      ${hadithSection(c, occasionHadith.ramadan)}${shareSection(c, h1, [
+        { label: d.firstDay, detail: `${f.full(first.day.date)} · ${times(first)}` },
+        { label: d.lastDay, detail: `${f.full(last.day.date)} · ${times(last)}` },
+        ...(eid ? [{ label: d.eidFitr, detail: `${f.full(eid.start)} · ${d.noFasting}` }] : []),
+      ])}
+      ${citySection(c, page)}
       ${linkRow(c, [{ href: href(c), label: d.allDates }, ...(month ? [{ href: href(c, month.slug), label: fill(d.monthTitle, { month: f.monthYear(month.start) }) }] : []), ...occasionLinks(c)], d.allDates)}`,
   };
 }
@@ -458,6 +529,7 @@ function model(c: Context): PageModel {
   if (subject.kind === 'widget') return widgetModel(c);
   if (subject.kind === 'year') return yearModel(c, subject.year);
   if (subject.kind === 'month') return monthModel(c, subject.page);
+  if (subject.kind === 'city') return cityModel(c, subject.page, subject.city);
   return occasionModel(c, subject.page);
 }
 
@@ -485,9 +557,9 @@ export function renderDatePages(template: string, site: DateSite, assets: PageAs
   return site.subjects.flatMap(subject => languages.map(lang => ({ path: `${datesPath(lang, subjectSlug(subject)).slice(1)}index.html`, html: renderDatePage(template, lang, subject, site, assets) })));
 }
 
-/** Finds the page for a dev-server path such as /ur/fasting/2026-11/. */
+/** Finds the page for a dev-server path such as /ur/fasting/2026-11/ or /fasting/ramadan-2027/london/. */
 export function subjectForPath(site: DateSite, pathname: string): { lang: Language; subject: DateSubject } | undefined {
-  const match = /^\/(?:([a-z]{2})\/)?fasting\/(?:([\w-]+)\/)?$/.exec(pathname);
+  const match = /^\/(?:([a-z]{2})\/)?fasting\/(?:([\w-]+(?:\/[\w-]+)?)\/)?$/.exec(pathname);
   if (!match) return undefined;
   const lang = languages.find(code => code === (match[1] ?? 'en'));
   if (!lang || (match[1] === 'en')) return undefined;
