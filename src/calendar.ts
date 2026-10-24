@@ -75,20 +75,12 @@ export function calendarSubscriptionLinks(feedUrl: string, title: string) {
   };
 }
 
-/** One all-day event per entry; `last` makes an entry span several days. */
-export function calendarInvite(days: (Pick<FastDay, 'date' | 'key'> & { last?: Date })[], title: string, description: string, activity: 'fast' | 'quran' = 'fast'): string {
-  const escape = (text: string) => text.replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
-  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Janat//Activity Calendar//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', `X-WR-CALNAME:${escape(title)}`];
-  for (const day of days) {
-    const end = dateKey(addDays(day.last ?? day.date, 1));
-    lines.push('BEGIN:VEVENT', `UID:${activity}-${day.key}${day.last ? `-${dateKey(day.last)}` : ''}@janat.local`, `DTSTAMP:${stamp}`,
-      `DTSTART;VALUE=DATE:${day.key.replace(/-/g, '')}`,
-      `DTEND;VALUE=DATE:${end.replace(/-/g, '')}`,
-      `SUMMARY:${escape(title)}`, `DESCRIPTION:${escape(description)}`,
-      'BEGIN:VALARM', 'TRIGGER:-PT8H', 'ACTION:DISPLAY', `DESCRIPTION:${escape(title)}`, 'END:VALARM', 'END:VEVENT');
-  }
-  lines.push('END:VCALENDAR');
+const escapeText = (text: string) => text.replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+const utcStamp = (date: Date) => date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
+/** Wraps events in a calendar and folds every line to 75 bytes, as RFC 5545 requires. */
+function calendarFile(name: string, events: string[][]): string {
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Janat//Activity Calendar//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', `X-WR-CALNAME:${escapeText(name)}`, ...events.flat(), 'END:VCALENDAR'];
   const encoder = new TextEncoder();
   return lines.map(line => {
     let folded = ''; let width = 0;
@@ -99,4 +91,28 @@ export function calendarInvite(days: (Pick<FastDay, 'date' | 'key'> & { last?: D
     }
     return folded;
   }).join('\r\n') + '\r\n';
+}
+
+/** One all-day event per entry; `last` makes an entry span several days. */
+export function calendarInvite(days: (Pick<FastDay, 'date' | 'key'> & { last?: Date })[], title: string, description: string, activity: 'fast' | 'quran' | 'qada' = 'fast'): string {
+  const stamp = utcStamp(new Date());
+  return calendarFile(title, days.map(day => {
+    const end = dateKey(addDays(day.last ?? day.date, 1));
+    return ['BEGIN:VEVENT', `UID:${activity}-${day.key}${day.last ? `-${dateKey(day.last)}` : ''}@janat.local`, `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${day.key.replace(/-/g, '')}`,
+      `DTEND;VALUE=DATE:${end.replace(/-/g, '')}`,
+      `SUMMARY:${escapeText(title)}`, `DESCRIPTION:${escapeText(description)}`,
+      'BEGIN:VALARM', 'TRIGGER:-PT8H', 'ACTION:DISPLAY', `DESCRIPTION:${escapeText(title)}`, 'END:VALARM', 'END:VEVENT'];
+  }));
+}
+
+export type TimedEvent = { uid: string; start: Date; end: Date; title: string; description: string };
+
+/** Events at exact instants, written in UTC so every calendar shows them in its own time zone. Each alerts at its start. */
+export function timedCalendar(name: string, events: TimedEvent[]): string {
+  const stamp = utcStamp(new Date());
+  return calendarFile(name, events.map(event => ['BEGIN:VEVENT', `UID:${event.uid}@janat.local`, `DTSTAMP:${stamp}`,
+    `DTSTART:${utcStamp(event.start)}`, `DTEND:${utcStamp(event.end)}`,
+    `SUMMARY:${escapeText(event.title)}`, `DESCRIPTION:${escapeText(event.description)}`,
+    'BEGIN:VALARM', 'TRIGGER:PT0S', 'ACTION:DISPLAY', `DESCRIPTION:${escapeText(event.title)}`, 'END:VALARM', 'END:VEVENT']));
 }

@@ -99,6 +99,37 @@ describe('fasting calendar', () => {
     expect(result).not.toContain('UID:fast-');
     expect(result.split('\r\n').every(line => new TextEncoder().encode(line).length <= 75)).toBe(true);
   });
+  it('serves suhoor and iftar times for a city or rounded coordinates in Ramadan', async () => {
+    const feed = (query: string) => onRequest({ request: new Request(`https://example.com/api/calendar?${query}`) });
+    const body = (await feed('activity=ramadan&city=london&method=MoonsightingCommittee&lang=en').text()).replace(/\r\n /g, '');
+    expect(body).toContain('X-WR-CALNAME:Janat | Suhoor & iftar times · London');
+    const starts = [...body.matchAll(/DTSTART:(\d{8}T\d{6}Z)/g)].map(match => match[1]);
+    // A 408-day window always holds one Ramadan, sometimes the start of a second.
+    expect(starts.length).toBeGreaterThanOrEqual(58);
+    expect(starts.length % 2).toBe(0);
+    expect(new Set([...body.matchAll(/UID:(.+)/g)].map(match => match[1])).size).toBe(starts.length);
+    expect(body).toMatch(/UID:suhoor-\d{4}-\d{2}-\d{2}@janat\.local/);
+    expect(body).toMatch(/UID:iftar-\d{4}-\d{2}-\d{2}@janat\.local/);
+    expect(body).toContain('SUMMARY:Suhoor ends at Fajr');
+    expect(body).toContain('DESCRIPTION:Ramadan\\, day 1\\nCalculated times.');
+    expect(feed('activity=ramadan&lat=24.86&lng=67&method=Karachi&lang=ur&adjustment=-1').status).toBe(200);
+    expect(feed('activity=ramadan&city=karachi').status).toBe(200);
+    // Near the poles some days have no Fajr or Maghrib; those days are left out rather than breaking the feed.
+    for (const query of ['activity=ramadan&lat=90&lng=0', 'activity=ramadan&lat=-90&lng=0', 'activity=ramadan&lat=89.99&lng=0']) {
+      const response = feed(query);
+      expect(response.status, query).toBe(200);
+      expect(await response.text(), query).toContain('END:VCALENDAR');
+    }
+    const urdu = (await feed('activity=ramadan&city=karachi&lang=ur').text()).replace(/\r\n /g, '');
+    expect(urdu).toContain(`X-WR-CALNAME:Janat | ${messages.ur.ramadanTimes} · کراچی`);
+    expect(urdu).toContain(`SUMMARY:${messages.ur.iftarEvent}`);
+    for (const query of ['activity=ramadan', 'activity=ramadan&city=atlantis', 'activity=ramadan&city=__proto__', 'activity=ramadan&city=london&lat=51.5&lng=0',
+      'activity=ramadan&lat=51.507&lng=0', 'activity=ramadan&lat=91&lng=0', 'activity=ramadan&lat=10', 'activity=ramadan&lat=1e1&lng=0',
+      'activity=ramadan&city=london&method=Unknown', 'activity=ramadan&city=london&method=toString', 'activity=ramadan&city=london&weekly=true',
+      'activity=fast&city=london', 'activity=quran&method=Karachi']) {
+      expect(feed(query).status, query).toBe(400);
+    }
+  });
   it('serves subscription feeds in every app language and rejects unknown ones', async () => {
     const feed = (query: string) => onRequest({ request: new Request(`https://example.com/api/calendar?${query}`) });
     for (const language of languages) expect(feed(`activity=fast&lang=${language}`).status, language).toBe(200);

@@ -330,6 +330,166 @@ html[dir=rtl] .hadith-progress span { transform-origin: right; }
 .widget-band p { max-width: 62ch; margin-top: 6px; font-size: 14.5px; line-height: 1.7; color: var(--night-muted); }
 .widget-band .button { flex-shrink: 0; }
 .widget-band-decoration { position: absolute; z-index: -1; bottom: -18px; inset-inline-end: 30px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 120px; font-weight: 700; line-height: 1; color: var(--gold-bright); opacity: .07; user-select: none; pointer-events: none; }
+
+/* ---------- Ramadan ---------- */
+.ramadan-band { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; gap: 22px; margin-top: 56px; padding: 30px clamp(20px, 4vw, 44px); border-radius: var(--radius-lg); background: radial-gradient(520px 260px at 8% 110%, #e98a4a2e, transparent 70%), radial-gradient(480px 240px at 92% 0%, #e2bd6e2e, transparent 70%), linear-gradient(155deg, var(--night-2), var(--night) 62%, #070d22); color: var(--night-ink); box-shadow: 0 24px 60px #0b143033; }
+.ramadan-band + .upcoming-section { margin-top: 56px; }
+.ramadan-band-icon { display: grid; place-items: center; width: 58px; height: 58px; flex-shrink: 0; border-radius: 18px; background: #e2bd6e1f; color: var(--gold-bright); }
+.ramadan-band-icon svg { width: 28px; height: 28px; stroke-width: 1.5; }
+.ramadan-band-text { flex: 1; min-width: 0; }
+.ramadan-band .eyebrow { color: var(--gold-bright); }
+.ramadan-band h2 { margin-top: 4px; font-size: 22px; color: var(--night-ink); }
+.ramadan-band p { max-width: 62ch; margin-top: 6px; font-size: 14.5px; line-height: 1.7; color: var(--night-muted); }
+.ramadan-band .ramadan-band-status strong { color: var(--night-ink); font-weight: 600; }
+.ramadan-band .button { flex-shrink: 0; }
+.ramadan-band-decoration, .ramadan-hero-decoration { position: absolute; z-index: -1; bottom: -34px; inset-inline-end: 26px; font-family: var(--arabic); font-size: 128px; font-weight: 700; line-height: 1.4; color: var(--gold-bright); opacity: .07; user-select: none; pointer-events: none; }
+
+.ramadan-hero { position: relative; isolation: isolate; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 340px); gap: 22px 40px; align-items: center; padding: clamp(26px, 4vw, 44px); border-radius: var(--radius-lg); background: radial-gradient(620px 300px at 0% 120%, #e98a4a33, transparent 70%), radial-gradient(520px 260px at 100% 0%, #e2bd6e2e, transparent 70%), linear-gradient(155deg, var(--night-2), var(--night) 62%, #070d22); color: var(--night-ink); box-shadow: 0 24px 60px #0b143033; }
+.ramadan-hero h1 { margin-top: 10px; font-size: clamp(34px, 4.4vw, 52px); font-weight: 600; line-height: 1.15; color: var(--night-ink); }
+.ramadan-hero h1 span { background: linear-gradient(100deg, #f6dc9d, var(--gold-bright) 45%, #c99a46); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.ramadan-hero-text p { max-width: 54ch; margin-top: 12px; font-size: 16px; line-height: 1.75; color: var(--night-muted); }
+.ramadan-status { display: flex; flex-direction: column; gap: 6px; padding: 22px 24px; border: 1px solid #e2bd6e33; border-radius: var(--radius); background: #ffffff0a; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.ramadan-status strong { font-family: var(--display); font-size: 22px; font-weight: 600; line-height: 1.35; color: var(--night-ink); }
+.ramadan-relative { align-self: flex-start; margin-top: 4px; padding: 4px 12px; border-radius: 999px; background: #e2bd6e24; color: var(--gold-bright); font-size: 13.5px; font-weight: 600; }
+.ramadan-sighting { grid-column: 1 / -1; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 10px; padding-top: 16px; border-top: 1px solid var(--night-line); font-size: 13.5px; line-height: 1.7; color: var(--night-muted); }
+.ramadan-sighting > svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--gold-bright); }
+.ramadan-sighting .text-button { color: var(--gold-bright); }
+:is(.ramadan-status, .quran-plan, .qada-summary) progress { width: 100%; height: 8px; border: 0; border-radius: 8px; overflow: hidden; background: var(--raised); -webkit-appearance: none; appearance: none; }
+.ramadan-status progress { margin-top: 8px; background: #ffffff1a; }
+.qada-summary progress { background: var(--line); }
+:is(.ramadan-status, .quran-plan, .qada-summary) progress::-webkit-progress-bar { background: transparent; }
+:is(.ramadan-status, .quran-plan, .qada-summary) progress::-webkit-progress-value { background: linear-gradient(90deg, #c99a46, var(--gold-bright)); border-radius: 8px; }
+:is(.ramadan-status, .quran-plan, .qada-summary) progress::-moz-progress-bar { background: linear-gradient(90deg, #c99a46, var(--gold-bright)); border-radius: 8px; }
+
+.ramadan-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 28px; margin-top: 28px; align-items: start; }
+.ramadan-card { min-width: 0; padding: 26px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow); }
+.ramadan-card h2 { font-size: 21px; }
+.ramadan-section > .ramadan-card { margin-top: 28px; }
+.place-controls { margin-top: 16px; }
+.place-controls label { display: block; margin: 14px 0 7px; font-size: 13.5px; font-weight: 500; color: var(--muted); }
+.place-row { display: flex; gap: 10px; }
+:is(.place-controls, .qada-section) :is(select, input) { display: block; width: 100%; min-width: 0; min-height: 46px; padding: 10px 13px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--bg); color: var(--ink); font-size: 16px; }
+.place-controls select { -webkit-appearance: none; appearance: none; background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%23b8892f' stroke-width='1.8'%3E%3Cpath d='m1 1.5 5 5 5-5'/%3E%3C/svg%3E") no-repeat right 14px center; padding-inline-end: 38px; }
+html[dir=rtl] .place-controls select { background-position: left 14px center; }
+:is(.place-controls, .qada-section) :is(select, input):focus { border-color: var(--gold); outline: none; box-shadow: 0 0 0 3px var(--gold-glow); }
+.place-row select { flex: 1; }
+.locate-button { flex-shrink: 0; min-height: 46px; padding-inline: 16px; font-size: 14px; }
+.locate-button svg { width: 17px; height: 17px; }
+.place-controls .fine-print { margin-top: 8px; }
+.fast-times-day { margin-top: 22px; font-size: 13.5px; font-weight: 600; color: var(--gold-text); }
+.fast-times { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+.time-tile { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 2px 12px; padding: 16px 18px; border-radius: var(--radius); background: var(--pattern), var(--raised); }
+.time-tile > svg { grid-row: 1 / 4; width: 30px; height: 30px; stroke-width: 1.5; color: var(--gold); }
+.time-tile.iftar { background: radial-gradient(240px 140px at 100% 100%, #e98a4a33, transparent 70%), linear-gradient(155deg, var(--night-2), var(--night)); color: var(--night-ink); }
+.time-tile.iftar > svg { color: var(--gold-bright); }
+.time-tile span { font-size: 13px; font-weight: 600; color: var(--muted); }
+.time-tile.iftar span, .time-tile.iftar small { color: var(--night-muted); }
+.time-tile strong { font-family: var(--display); font-size: 28px; font-weight: 600; line-height: 1.25; }
+.time-tile small { font-size: 12.5px; color: var(--muted); }
+.ramadan-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.ramadan-actions .primary { flex: 1 1 auto; }
+
+.timetable-card h2 { margin-bottom: 14px; }
+.timetable-wrap { max-height: 560px; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+.timetable { width: 100%; border-collapse: collapse; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+.timetable th { position: sticky; top: 0; z-index: 1; padding: 11px 14px; background: var(--raised); font-size: 12.5px; font-weight: 600; letter-spacing: .04em; text-align: start; color: var(--muted); }
+.timetable td { padding: 10px 14px; border-top: 1px solid var(--line); white-space: nowrap; }
+.timetable td:first-child { width: 1%; font-weight: 600; color: var(--gold-text); }
+.timetable td:nth-child(n+3) { font-weight: 600; }
+.timetable tr.is-today td { background: var(--gold-soft); }
+.timetable tr.is-today td:first-child { box-shadow: inset 3px 0 var(--gold); }
+html[dir=rtl] .timetable tr.is-today td:first-child { box-shadow: inset -3px 0 var(--gold); }
+
+.plan-heading { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px; }
+.plan-heading > div { flex: 1 1 360px; }
+.plan-heading h2, .qada-section h2 { margin-top: 4px; }
+.plan-heading p, .qada-intro { max-width: 62ch; margin-top: 6px; font-size: 14.5px; line-height: 1.7; color: var(--muted); }
+.plan-progress { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.juz-grid { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }
+.juz-tile { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 64px; padding: 6px 2px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); color: var(--ink); transition: background .2s, border-color .2s, transform .2s; }
+.juz-tile small { font-size: 10.5px; font-weight: 500; letter-spacing: .04em; color: var(--muted); }
+.juz-tile span { font-family: var(--display); font-size: 20px; font-weight: 600; line-height: 1.2; }
+.juz-tile svg { position: absolute; top: 5px; inset-inline-end: 5px; width: 13px; height: 13px; opacity: 0; }
+.juz-tile:hover { border-color: var(--line-strong); }
+.juz-tile.today { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+.juz-tile.read { border-color: transparent; background: var(--night); color: var(--gold-bright); }
+.juz-tile.read small { color: var(--night-muted); }
+.juz-tile.read svg { opacity: 1; }
+.plan-done { display: flex; align-items: center; gap: 10px; margin-top: 18px; padding: 12px 16px; border-radius: 14px; background: var(--gold-soft); color: var(--gold-text); font-size: 14.5px; font-weight: 600; line-height: 1.6; }
+.plan-done svg { width: 18px; height: 18px; flex-shrink: 0; }
+.quran-plan > .text-button { margin-top: 10px; }
+
+.qada-summary { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr)); gap: 16px 24px; align-items: end; margin-top: 20px; padding: 20px 22px; border-radius: var(--radius); background: var(--pattern), var(--raised); }
+.qada-summary progress { grid-column: 1 / -1; }
+.qada-stat { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.qada-stat label, .qada-stat span { font-size: 13.5px; font-weight: 500; color: var(--muted); }
+.qada-stat strong { font-family: var(--display); font-size: 32px; font-weight: 600; line-height: 46px; }
+.stepper { display: flex; align-items: center; gap: 8px; }
+.stepper .icon-button { width: 46px; height: 46px; border-radius: 12px; }
+.qada-section .stepper input { width: 96px; flex: 0 1 96px; font-family: var(--display); font-size: 22px; font-weight: 600; text-align: center; -moz-appearance: textfield; }
+.stepper input::-webkit-inner-spin-button, .stepper input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.qada-layout { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 20px; margin-top: 22px; }
+.qada-form label { display: block; margin-bottom: 7px; font-size: 13.5px; font-weight: 600; }
+.qada-form > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.qada-form input { flex: 1 1 150px; }
+.qada-form .button { flex: 1 1 auto; min-height: 46px; padding-inline: 16px; font-size: 14px; }
+.qada-deadline { display: grid; grid-template-columns: auto minmax(0, 1fr); align-content: start; gap: 2px 10px; padding: 14px 16px; border: 1px dashed var(--line-strong); border-radius: var(--radius); font-size: 13.5px; color: var(--muted); }
+.qada-deadline svg { grid-row: 1 / 4; width: 20px; height: 20px; color: var(--gold); }
+.qada-deadline strong { font-size: 16px; color: var(--ink); }
+.qada-section .list-title { margin-top: 26px; }
+.qada-list { list-style: none; max-height: 340px; overflow: auto; }
+.qada-list li { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.qada-list li:last-child { border-bottom: 0; }
+.qada-list li > span:nth-child(2) { flex: 1; min-width: 0; }
+.qada-list strong { display: block; font-size: 15px; font-weight: 600; }
+.qada-list small { display: block; margin-top: 3px; font-size: 13px; color: var(--muted); }
+.qada-note { display: flex; align-items: flex-start; gap: 8px; margin-top: 20px; }
+.qada-note svg, .ramadan-card > .fine-print svg, .ramadan-footer svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 5px; color: var(--gold); }
+.ramadan-card > .fine-print:has(svg) { display: flex; gap: 8px; }
+.ramadan-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 20px; margin-top: 18px; }
+.ramadan-footer .fine-print { display: flex; gap: 8px; margin-top: 0; }
+html[lang=ur] :is(.ramadan-band p, .ramadan-hero-text p, .ramadan-sighting, .plan-heading p, .qada-intro, .time-tile span) { line-height: 2.1; }
+html[lang=ur] .ramadan-status strong { line-height: 1.9; }
+
+@media (max-width: 1100px) {
+  .qada-layout { grid-template-columns: 1fr 1fr; }
+  .qada-deadline { grid-column: 1 / -1; }
+}
+@media (max-width: 980px) {
+  .ramadan-layout { grid-template-columns: minmax(0, 1fr); }
+  .ramadan-hero { grid-template-columns: minmax(0, 1fr); }
+  .timetable-wrap { max-height: none; }
+}
+@media (max-width: 760px) {
+  .ramadan-band { flex-direction: column; align-items: flex-start; gap: 14px; margin-top: 40px; padding: 24px 20px; border-radius: 22px; }
+  .ramadan-band + .upcoming-section { margin-top: 40px; }
+  .ramadan-band .button { width: 100%; }
+  .ramadan-band-decoration, .ramadan-hero-decoration { font-size: 88px; bottom: -20px; }
+  .ramadan-hero { gap: 18px; padding: 24px 20px; border-radius: 22px; }
+  .ramadan-hero h1 { font-size: 34px; }
+  .ramadan-hero-text p { font-size: 15px; }
+  .ramadan-status { padding: 16px 18px; }
+  .ramadan-sighting { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+  .ramadan-sighting > svg { margin-top: 5px; }
+  .ramadan-sighting .text-button { grid-column: 2; justify-self: start; }
+  .ramadan-status strong { font-size: 19px; }
+  .ramadan-layout { gap: 18px; margin-top: 18px; }
+  .ramadan-card { padding: 20px 18px; border-radius: 20px; }
+  .ramadan-section > .ramadan-card { margin-top: 18px; }
+  .place-row { flex-direction: column; }
+  .locate-button { width: 100%; }
+  .time-tile { grid-template-columns: minmax(0, 1fr); padding: 14px; }
+  .time-tile > svg { grid-row: auto; width: 24px; height: 24px; }
+  .time-tile strong { font-size: 24px; }
+  .ramadan-actions > .button { width: 100%; }
+  .timetable { font-size: 13.5px; }
+  .timetable :is(th, td) { padding: 9px 10px; }
+  .juz-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .qada-summary { grid-template-columns: 1fr 1fr; padding: 16px; }
+  .qada-owed { grid-column: 1 / -1; }
+  .qada-section .stepper input { flex: 1 1 auto; width: auto; }
+  .qada-layout { grid-template-columns: minmax(0, 1fr); }
+}
 .future-decoration { position: absolute; z-index: -1; top: 50%; inset-inline-end: 36px; transform: translateY(-50%); font-family: var(--arabic); font-size: 110px; line-height: 1; color: var(--gold); opacity: .12; user-select: none; pointer-events: none; }
 
 /* ---------- FAQ ---------- */
@@ -699,11 +859,16 @@ html[dir=rtl] .hero h1 span, html[lang=bn] .hero h1 span { font-weight: 700; }
   .language-select { min-height: 38px; padding: 0 11px; }
   .header-reminder { width: 38px; min-height: 38px; padding: 0; }
   .header-reminder span { display: none; }
-  nav { position: fixed; z-index: 40; left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; margin: 0; padding: 6px; border: 1px solid #e2bd6e33; border-radius: 22px; background: #0b1430f2; -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); box-shadow: 0 14px 40px #02061866; }
-  .nav-link { flex-direction: column; justify-content: center; gap: 3px; min-width: 0; min-height: 52px; padding: 6px 2px; border-radius: 16px; font-size: 11px; line-height: 1.25; }
+  nav { position: fixed; z-index: 40; left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; margin: 0; padding: 6px; border: 1px solid #e2bd6e33; border-radius: 22px; background: #0b1430f2; -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); box-shadow: 0 14px 40px #02061866; }
+  .nav-link { flex-direction: column; justify-content: center; gap: 3px; min-width: 0; min-height: 52px; padding: 6px 1px; border-radius: 16px; font-size: 10.5px; line-height: 1.25; }
   .nav-link svg { display: block; width: 20px; height: 20px; }
   .nav-link span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .nav-link.active { background: #e2bd6e24; color: var(--gold-bright); }
+  @media (max-width: 420px) {
+    nav { left: 8px; right: 8px; gap: 0; padding: 5px 4px; }
+    .nav-link { padding-inline: 0; font-size: clamp(9px, 2.62vw, 10.5px); letter-spacing: -.01em; }
+    .nav-link.active { font-weight: 500; }
+  }
   .site-footer { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
   .toast { bottom: calc(92px + env(safe-area-inset-bottom)); }
   .consent { inset-inline: 12px; bottom: calc(92px + env(safe-area-inset-bottom)); width: auto; padding: 16px; }

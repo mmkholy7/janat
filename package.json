@@ -11,6 +11,7 @@
     "test:browser": "playwright test"
   },
   "dependencies": {
+    "adhan": "^4.4.6",
     "lucide": "^0.468.0"
   },
   "devDependencies": {
@@ -19,5 +20,7 @@
     "vite": "^6.1.0",
     "vitest": "^5.0.5"
   },
-  "engines": { "node": ">=22.14.0" }
+  "engines": {
+    "node": ">=22.14.0"
+  }
 }

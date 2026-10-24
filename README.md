@@ -30,6 +30,8 @@ Open the URL printed by Vite (normally http://localhost:5173). In GitHub Codespa
 - Google Calendar, Outlook.com, and Microsoft 365 event drafts without downloading or uploading files.
 - Read-only rolling subscriptions for Google, Outlook, Microsoft 365, and Apple Calendar, backed by a public Cloudflare Worker endpoint. No account access or personal activity history is shared.
 - An embeddable Sunnah fasting calendar for other websites (`/embed/`, month or upcoming-fasts view, light/dark/auto, all ten languages) and a builder with live preview and copyable code at `/fasting/widget/`. The widget sets no cookies; each fast opens Janat's add-to-calendar sheet.
+- A Ramadan companion at `/#ramadan`: the expected start and current day of Ramadan, suhoor (Fajr) and iftar (Maghrib) times for 40 cities or the visitor's location with 12 calculation methods (computed in the browser with [adhan](https://github.com/batoulapps/adhan-js)), a full-month timetable, a calendar subscription and download of every suhoor and iftar, and a 30-day juz-by-juz Quran plan.
+- A make-up (qada) fast tracker: count missed Ramadan fasts, log each one made up, plan the next one as a calendar event, and see how long remains until the next Ramadan. Ramadan, both Eids, and the days of Tashriq are refused as make-up days.
 
 ## Languages and search
 
@@ -47,7 +49,7 @@ Translations other than English were drafted with machine assistance. Have nativ
 
 The logbook is stored in this browser's `localStorage`, without encryption or cross-device sync. Clearing browser data deletes it. Export before changing browsers. Exports currently serve as backups for manual recovery; there is no import interface yet. Private browsing may not retain records. Calendar exports contain the activity name and will be visible to the chosen calendar provider. The page loads fonts from Google Fonts (plus a script-specific font for Urdu, Bengali, or Persian), which receives normal network metadata; landscape photos are served locally. Google Tag Manager (`GTM-KNCXQJPL`, see `src/consent.ts`) loads only after a visitor accepts analytics cookies in the consent banner; the choice is stored in `localStorage` (`janat.consent`) and can be changed anytime under "Privacy choices" in the footer, which also removes Google Analytics cookies. Google Consent Mode defaults to denied (set inline in `index.html`), so any Google tag on the page waits for the visitor's choice; advertising signals always stay denied, and there are no advertising integrations.
 
-Hijri dates use the browser's built-in `Intl` Umm al-Qura calendar and the device's local date. Local moon sightings may differ; confirm dates with your community. The calendar is a planning aid, not a religious ruling or assessment of health, obligations, or exemptions. Ramadan obligations are outside this version's scope. Source references are available in the app. A qualified religious review is recommended before public release.
+Hijri dates use the browser's built-in `Intl` Umm al-Qura calendar and the device's local date. Local moon sightings may differ; confirm dates with your community. The calendar is a planning aid, not a religious ruling or assessment of health, obligations, or exemptions. Suhoor and iftar times are calculated, not taken from a mosque timetable; visitors are told to follow their local mosque when they differ. "Use my location" keeps coordinates on the device; a Ramadan subscription carries them rounded to two decimals (about 1 km) so the Worker can calculate the times. The Quran plan and make-up fasts stay in `localStorage` and are included in the JSON backup. Source references are available in the app. A qualified religious review is recommended before public release.
 
 ## Tests
 
@@ -58,7 +60,7 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-Unit tests cover Hijri dates, scheduling overlaps, excluded dates, adjustments, iCalendar alarms, translation completeness, language routing, pre-rendered metadata, and the sitemap. Browser tests cover all ten languages, RTL, responsive overflow, language URLs and detection, the FAQ, images, logbook persistence, invitation downloads, and calendar navigation. GitHub Actions runs both suites.
+Unit tests cover Hijri dates, scheduling overlaps, excluded dates, adjustments, iCalendar alarms, Ramadan dates, suhoor and iftar times, the Ramadan feed, make-up fast rules, translation completeness, language routing, pre-rendered metadata, and the sitemap. Browser tests cover all ten languages, RTL, responsive overflow, language URLs and detection, the FAQ, images, logbook persistence, invitation downloads, calendar navigation, and the Ramadan companion (city and location times, subscription, Quran plan, make-up fasts). GitHub Actions runs both suites.
 
 If browser downloads are blocked, tests can use an installed Chrome or Edge: set `PLAYWRIGHT_CHANNEL=chrome` or `PLAYWRIGHT_CHANNEL=msedge` in your shell before running the browser suite.
 

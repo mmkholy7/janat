@@ -1,5 +1,7 @@
-import { createIcons, MoonStar, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown, Gem, HandHeart, Shuffle, Cookie, Sparkles, CalendarPlus, CodeXml } from 'lucide';
-import { addDays, calendarEventLinks, calendarInvite, calendarSubscriptionLinks, dateKey, fastDay, fastDaysBetween, hijriDate, upcomingDays, type FastDay, type FastStatus } from './calendar';
+import { createIcons, MoonStar, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown, Gem, HandHeart, Shuffle, Cookie, Sparkles, CalendarPlus, CodeXml, Sunset, Sunrise, LocateFixed, Minus, Plus } from 'lucide';
+import { addDays, calendarEventLinks, calendarInvite, calendarSubscriptionLinks, dateKey, fastDay, fastDaysBetween, hijriDate, timedCalendar, upcomingDays, type FastDay, type FastStatus } from './calendar';
+import { cities, cityName, defaultCity, distance, findCity, isMethod, methods, nearestCity, roundCoordinate, validLatitude, validLongitude, type City, type MethodId } from './cities';
+import { currentRamadan, juzForDay, MAX_OWED, nextRamadanStart, parseKhatm, parseQada, qadaAllowed, qadaDay, type Qada } from './ramadan';
 import { loadMessages, locales, verses, type Messages } from './i18n';
 import { datesPath, detectLanguage, fontUrl, isLanguage, languageFromPath, languageInfo, languageLink, languagePath, languages, SITE_URL, type Language } from './languages';
 import en from './locales/en';
@@ -12,12 +14,13 @@ import { renderShareImage, type ShareImageCell, type ShareImageFast, type ShareI
 import { applyConsent, saveConsent, storedConsent, type Consent } from './consent';
 import './theme.css';
 
-type View = 'home' | 'calendar' | 'logbook' | 'quran' | 'resources';
+type View = 'home' | 'calendar' | 'ramadan' | 'logbook' | 'quran' | 'resources';
+const views: View[] = ['home', 'calendar', 'ramadan', 'logbook', 'quran', 'resources'];
 type Preferences = { language: Language; adjustment: number; weekly: boolean; white: boolean; quranGoal: number };
 type QuranSession = { id: string; date: string; kind: 'recitation' | 'revision'; minutes: number; pages: number };
 const app = document.querySelector<HTMLDivElement>('#app')!;
-const icons = { CodeXml, MoonStar, Gem, HandHeart, Shuffle, Cookie, Sparkles, CalendarPlus, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library };
-const navIcons: Record<View, string> = { home: 'house', calendar: 'calendar-days', logbook: 'notebook-pen', quran: 'book-open', resources: 'library' };
+const icons = { Sunset, Sunrise, LocateFixed, Minus, Plus, CodeXml, MoonStar, Gem, HandHeart, Shuffle, Cookie, Sparkles, CalendarPlus, Share2, Quote, Pause, Play, Mail, Linkedin, ImageDown, ArrowUpRight, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Bell, BookOpen, Check, X, Download, Copy, ShieldCheck, Settings2, Moon, Sun, Heart, Sprout, Globe, Image, Trash2, House, NotebookPen, Library };
+const navIcons: Record<View, string> = { home: 'house', calendar: 'calendar-days', ramadan: 'sunset', logbook: 'notebook-pen', quran: 'book-open', resources: 'library' };
 const shortLanguageNames: Partial<Record<Language, string>> = { ar: 'عربي', ur: 'اردو', bn: 'বাংলা', fa: 'فارسی' };
 let storageAvailable = true;
 applyConsent(storedConsent());
@@ -40,13 +43,34 @@ if (rawLog && typeof rawLog === 'object' && !Array.isArray(rawLog)) {
 }
 const rawQuran = load('janat.quran');
 let quranSessions: QuranSession[] = Array.isArray(rawQuran) ? rawQuran.filter(validSession) : [];
-const routeView = (): View => ['calendar', 'logbook', 'quran', 'resources'].includes(location.hash.slice(1)) ? location.hash.slice(1) as View : 'home';
+/** A chosen city, or device coordinates rounded to about 1 km with the device time zone. `method` is set only when the visitor picks one. */
+type RamadanSettings = { city?: string; lat?: number; lng?: number; tz?: string; method?: MethodId };
+type RamadanPlace = { lat: number; lng: number; tz: string; method: MethodId; city?: City };
+const deviceTimeZone = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return undefined; } };
+function validTimeZone(value: unknown): value is string {
+  if (typeof value !== 'string' || value.length > 64) return false;
+  try { new Intl.DateTimeFormat('en', { timeZone: value }); return true; } catch { return false; }
+}
+function parseRamadanSettings(value: unknown): RamadanSettings {
+  const raw = (value && typeof value === 'object' && !Array.isArray(value) ? value : {}) as Record<string, unknown>;
+  const method = isMethod(raw.method) ? raw.method : undefined;
+  if (findCity(raw.city)) return { city: raw.city as string, method };
+  if (validLatitude(raw.lat) && validLongitude(raw.lng)) return { lat: raw.lat, lng: raw.lng, tz: validTimeZone(raw.tz) ? raw.tz : undefined, method };
+  return { method };
+}
+let ramadanSettings = parseRamadanSettings(load('janat.ramadan'));
+let qada: Qada = parseQada(load('janat.qada'), dateKey(new Date()));
+let khatm = parseKhatm(load('janat.khatm'));
+// adhan is only needed for times, so it loads with the Ramadan view.
+let prayerTimes: typeof import('./prayer-times') | null = null;
+let locating = false;
+const routeView = (): View => views.includes(location.hash.slice(1) as View) ? location.hash.slice(1) as View : 'home';
 let view: View = routeView();
 let resourceCategory: 'all' | ResourceCategory = 'all';
 let month = new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12);
 let scene = 0;
 let selected: string | null = null;
-let activeModal: 'reminders' | 'settings' | 'record' | 'sources' | 'calendar' | 'add-days' | 'quran-calendar' | 'share' | null = null;
+let activeModal: 'reminders' | 'settings' | 'record' | 'sources' | 'calendar' | 'add-days' | 'quran-calendar' | 'ramadan-calendar' | 'qada-plan' | 'share' | null = null;
 let addRange = { from: '', to: '' };
 const HADITH_MS = 9000;
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -413,6 +437,119 @@ function logbookView() {
 function widgetBand() {
   return `<section class="widget-band" aria-labelledby="widget-band-title"><span class="widget-band-icon">${icon('code-xml')}</span><div class="widget-band-text"><span class="eyebrow">${text().widgetEyebrow}</span><h2 id="widget-band-title">${text().widgetTitle}</h2><p>${text().widgetLead}</p></div><a class="button pale" href="${datesPath(preferences.language, 'widget')}">${text().widgetCta}${icon('arrow-right')}</a><span class="widget-band-decoration" aria-hidden="true" dir="ltr">&lt;/&gt;</span></section>`;
 }
+/** Coordinates take the method of the nearest listed city when it is close enough to share its mosques' practice. */
+function ramadanPlace(): RamadanPlace {
+  const { lat, lng } = ramadanSettings;
+  if (lat !== undefined && lng !== undefined) {
+    const near = nearestCity(lat, lng);
+    const local: MethodId = distance(lat, lng, near.lat, near.lng) <= 1500 ? near.method : 'MuslimWorldLeague';
+    return { lat, lng, tz: ramadanSettings.tz ?? deviceTimeZone() ?? 'UTC', method: ramadanSettings.method ?? local };
+  }
+  const city = findCity(ramadanSettings.city) ?? defaultCity(deviceTimeZone(), preferences.language);
+  return { lat: city.lat, lng: city.lng, tz: city.tz, method: ramadanSettings.method ?? city.method, city };
+}
+const placeName = (place: RamadanPlace) => place.city ? cityName(place.city, preferences.language) : text().myLocation;
+const methodName = (method: MethodId) => text()[`method${method}`];
+const clock = (date: Date, timeZone: string) => new Intl.DateTimeFormat(locales[preferences.language], { hour: 'numeric', minute: '2-digit', timeZone }).format(date);
+function zoneLabel(timeZone: string) {
+  if (timeZone === deviceTimeZone()) return '';
+  try { return new Intl.DateTimeFormat(locales[preferences.language], { timeZone, timeZoneName: 'shortOffset' }).formatToParts(new Date()).find(part => part.type === 'timeZoneName')?.value ?? ''; } catch { return ''; }
+}
+function loadPrayerTimes() {
+  if (prayerTimes) return;
+  void import('./prayer-times').then(module => { prayerTimes = module; if (view === 'ramadan') refresh(); }).catch(() => undefined);
+}
+const ramadanSoon = (ramadan = currentRamadan(today(), preferences.adjustment)) => ramadan.days[0].date.getTime() - today().getTime() <= 45 * 86400000;
+function ramadanStatus(ramadan: ReturnType<typeof currentRamadan>) {
+  const current = ramadan.days.find(day => day.key === dateKey(today()));
+  return current ? text().ramadanDayOf.replace('{n}', number(current.day)).replace('{total}', number(ramadan.days.length)) : `${format(ramadan.days[0].date, { day: 'numeric', month: 'long', year: 'numeric' })} · ${relativeDate(ramadan.days[0].date)}`;
+}
+function ramadanBand() {
+  const ramadan = currentRamadan(today(), preferences.adjustment);
+  const during = ramadan.days.some(day => day.key === dateKey(today()));
+  return `<section class="ramadan-band" aria-labelledby="ramadan-band-title"><span class="ramadan-band-icon">${icon('sunset')}</span><div class="ramadan-band-text"><span class="eyebrow">${icon('moon-star')}${text().ramadan} ${number(ramadan.hijriYear)}</span><h2 id="ramadan-band-title">${during ? text().ramadanMubarak : text().ramadanBandTitle}</h2><p>${text().ramadanBandLead}</p><p class="ramadan-band-status">${during ? '' : `${text().ramadanBegins}: `}<strong>${ramadanStatus(ramadan)}</strong></p></div><button class="button pale" data-view="ramadan">${text().ramadanBandCta}${icon('arrow-right')}</button><span class="ramadan-band-decoration" lang="ar" aria-hidden="true">رمضان</span></section>`;
+}
+function ramadanView() {
+  loadPrayerTimes();
+  const lang = preferences.language, todayKey = dateKey(today()), tomorrowKey = dateKey(addDays(today(), 1));
+  const ramadan = currentRamadan(today(), preferences.adjustment), total = ramadan.days.length;
+  const current = ramadan.days.find(day => day.key === todayKey), shown = current ?? ramadan.days[0];
+  const place = ramadanPlace(), zone = zoneLabel(place.tz);
+  const timesFor = (date: Date) => prayerTimes?.fastTimes(date, place.lat, place.lng, place.method);
+  const times = timesFor(shown.date);
+  const sorted = [...cities].sort((first, second) => cityName(first, lang).localeCompare(cityName(second, lang), locales[lang]));
+  const status = current
+    ? `<span class="eyebrow light">${icon('moon-star')}${text().ramadanMubarak}</span><strong>${ramadanStatus(ramadan)}</strong><progress max="${total}" value="${current.day}" aria-label="${ramadanStatus(ramadan)}"></progress>`
+    : `<span class="eyebrow light">${icon('moon-star')}${text().ramadanBegins}</span><strong>${format(shown.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</strong><span class="ramadan-relative">${relativeDate(shown.date)}</span>`;
+  const todayJuz = current ? juzForDay(current.day, total) : [];
+  const nextJuz = todayJuz.find(juz => !khatm.includes(juz)) ?? todayJuz[0] ?? Array.from({ length: 30 }, (_, index) => index + 1).find(juz => !khatm.includes(juz));
+  const made = qada.made.length, left = Math.max(0, qada.owed - made);
+  const next = nextRamadanStart(today(), preferences.adjustment);
+  const logKey = dateKey(qadaDay(today(), -1, preferences.adjustment)), planKey = dateKey(qadaDay(addDays(today(), 1), 1, preferences.adjustment));
+  return `<section class="page-section ramadan-section">
+    <div class="ramadan-hero"><div class="ramadan-hero-text"><div class="eyebrow light">${icon('sunset')} ${text().ramadanEyebrow}</div><h1>${text().ramadan} <span>${number(ramadan.hijriYear)}</span></h1><p>${text().ramadanIntro}</p></div><div class="ramadan-status">${status}</div><p class="ramadan-sighting">${icon('moon')}<span>${text().ramadanSighting}</span><button class="text-button" data-action="settings">${icon('settings-2')}${text().calendarSettings}</button></p><span class="ramadan-hero-decoration" lang="ar" aria-hidden="true">رمضان</span></div>
+    <div class="ramadan-layout"><section class="ramadan-card ramadan-times" aria-labelledby="times-title"><h2 id="times-title">${text().ramadanTimes}</h2>
+      <div class="place-controls"><label for="ramadan-city">${text().city}</label><div class="place-row"><select id="ramadan-city">${place.city ? '' : `<option value="" selected>${text().myLocation}</option>`}${sorted.map(entry => `<option value="${entry.id}" ${place.city?.id === entry.id ? 'selected' : ''}>${cityName(entry, lang)}</option>`).join('')}</select><button class="button outline locate-button" data-action="locate" ${locating ? 'disabled' : ''}>${icon('locate-fixed')}<span>${locating ? text().locating : text().useMyLocation}</span></button></div>
+      <label for="ramadan-method">${text().method}</label><select id="ramadan-method">${methods.map(method => `<option value="${method}" ${place.method === method ? 'selected' : ''}>${methodName(method)}</option>`).join('')}</select><p class="fine-print">${text().methodHint}</p></div>
+      <p class="fast-times-day">${current ? text().today : text().ramadanFirstDay} · ${format(shown.date, { weekday: 'long', day: 'numeric', month: 'long' })}${zone ? ` · <span dir="ltr">${zone}</span>` : ''}</p>
+      <div class="fast-times" aria-live="polite"><div class="time-tile suhoor">${icon('sunrise')}<span>${text().suhoorEnds}</span><strong>${times ? clock(times.fajr, place.tz) : times === null ? '—' : text().loading}</strong><small>${text().fajr}</small></div><div class="time-tile iftar">${icon('sunset')}<span>${text().iftar}</span><strong>${times ? clock(times.maghrib, place.tz) : times === null ? '—' : text().loading}</strong><small>${text().maghrib}</small></div></div>
+      <div class="ramadan-actions"><button class="button primary" data-action="ramadan-invite">${icon('calendar-plus')}${text().subscribeTimes}</button><button class="button outline" data-action="download-ramadan" ${prayerTimes ? '' : 'disabled'}>${icon('download')}${text().download}</button></div>
+      <p class="fine-print">${text().timesNote}</p>${place.city ? '' : `<p class="fine-print">${icon('shield-check')}${text().locationNote}</p>`}</section>
+      <section class="ramadan-card timetable-card" aria-labelledby="timetable-title"><h2 id="timetable-title">${text().timetable}</h2><div class="timetable-wrap"><table class="timetable"><thead><tr><th scope="col">${text().dayColumn}</th><th scope="col">${text().dateColumn}</th><th scope="col">${text().suhoorEnds}</th><th scope="col">${text().iftar}</th></tr></thead><tbody>${ramadan.days.map(day => {
+        const row = timesFor(day.date);
+        return `<tr${day.key === todayKey ? ' class="is-today" aria-current="date"' : ''}><td>${number(day.day)}</td><td>${format(day.date, { weekday: 'short', day: 'numeric', month: 'short' })}</td><td>${row ? clock(row.fajr, place.tz) : row === null ? '—' : '…'}</td><td>${row ? clock(row.maghrib, place.tz) : row === null ? '—' : '…'}</td></tr>`;
+      }).join('')}</tbody></table></div></section></div>
+    <section class="ramadan-card quran-plan" aria-labelledby="plan-title"><div class="plan-heading"><div><div class="eyebrow green">${icon('book-open')}${text().quran}</div><h2 id="plan-title">${text().quranPlan}</h2><p>${text().quranPlanIntro}</p></div>${nextJuz ? `<a class="button outline" href="https://quran.com/juz/${nextJuz}" target="_blank" rel="noopener noreferrer">${icon('book-open')}${text().readJuz.replace('{n}', number(nextJuz))}${icon('arrow-up-right')}</a>` : ''}</div>
+      <div class="plan-progress"><span>${text().juzProgress.replace('{n}', number(khatm.length))}</span><progress max="30" value="${khatm.length}" aria-label="${text().juzProgress.replace('{n}', number(khatm.length))}"></progress></div>
+      <div class="juz-grid">${Array.from({ length: 30 }, (_, index) => index + 1).map(juz => `<button class="juz-tile${khatm.includes(juz) ? ' read' : ''}${todayJuz.includes(juz) ? ' today' : ''}" data-action="juz" data-juz="${juz}" aria-pressed="${khatm.includes(juz)}" aria-label="${text().juz} ${number(juz)}"><small>${text().juz}</small><span>${number(juz)}</span>${icon('check')}</button>`).join('')}</div>
+      ${khatm.length === 30 ? `<p class="plan-done">${icon('sparkles')}${text().khatmDone}</p>` : ''}${khatm.length ? `<button class="text-button danger" data-action="reset-plan">${icon('trash-2')}${text().resetPlan}</button>` : ''}</section>
+    <section class="ramadan-card qada-section" id="qada" aria-labelledby="qada-title"><div class="eyebrow green">${icon('calendar-days')}${text().ramadan}</div><h2 id="qada-title">${text().qada}</h2><p class="qada-intro">${text().qadaIntro}</p>
+      <div class="qada-summary"><div class="qada-stat qada-owed"><label for="qada-owed">${text().qadaOwed}</label><div class="stepper"><button class="icon-button" data-action="qada-step" data-step="-1" aria-label="${text().removeOne}" title="${text().removeOne}" ${qada.owed === 0 ? 'disabled' : ''}>${icon('minus')}</button><input id="qada-owed" type="number" inputmode="numeric" min="0" max="${MAX_OWED}" step="1" value="${qada.owed}"><button class="icon-button" data-action="qada-step" data-step="1" aria-label="${text().addOne}" title="${text().addOne}" ${qada.owed >= MAX_OWED ? 'disabled' : ''}>${icon('plus')}</button></div></div><div class="qada-stat"><strong>${number(made)}</strong><span>${text().qadaMade}</span></div><div class="qada-stat"><strong>${number(left)}</strong><span>${text().qadaLeft}</span></div><progress max="${Math.max(qada.owed, 1)}" value="${Math.min(made, qada.owed)}" aria-label="${text().qadaMade}"></progress></div>
+      ${qada.owed > 0 && left === 0 ? `<p class="plan-done">${icon('check')}${text().qadaDone}</p>` : ''}
+      <div class="qada-layout"><form id="qada-log" class="qada-form"><label for="qada-date">${text().qadaLog}</label><div><input id="qada-date" name="date" type="date" min="2000-01-01" max="${todayKey}" value="${logKey}" required><button class="button primary" type="submit">${icon('check')}<span>${text().qadaLog}</span></button></div></form>
+      <form id="qada-plan" class="qada-form"><label for="qada-plan-date">${text().qadaPlan}</label><div><input id="qada-plan-date" name="date" type="date" min="${tomorrowKey}" max="${dateKey(addDays(today(), 400))}" value="${planKey}" required><button class="button outline" type="submit">${icon('calendar-plus')}<span>${text().setReminder}</span></button></div></form>
+      <p class="qada-deadline">${icon('moon-star')}<span>${text().qadaNextRamadan}</span><strong>${format(next, { day: 'numeric', month: 'long', year: 'numeric' })}</strong><small>${relativeDate(next)}</small></p></div>
+      ${made ? `<h3 class="list-title">${text().qadaHistory}</h3><ul class="qada-list">${[...qada.made].reverse().map(key => `<li><span class="status-icon">${icon('check')}</span><span><strong>${format(parseDate(key), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</strong><small>${hijriLabel(parseDate(key))}</small></span><button class="icon-button" data-action="qada-remove" data-date="${key}" aria-label="${text().removeMakeup}" title="${text().removeMakeup}">${icon('trash-2')}</button></li>`).join('')}</ul>` : ''}
+      <p class="fine-print qada-note">${icon('heart')}${text().qadaNote}</p></section>
+    <div class="ramadan-footer"><p class="fine-print">${icon('shield-check')}${text().ramadanLocal}</p><button class="text-button" data-action="backup">${icon('download')}${text().backup}</button></div></section>`;
+}
+function exportRamadan() {
+  if (!prayerTimes) return;
+  const place = ramadanPlace(), ramadan = currentRamadan(today(), preferences.adjustment);
+  const name = `Janat | ${text().ramadanTimes}${place.city ? ` · ${placeName(place)}` : ''}`;
+  downloadFile(timedCalendar(name, prayerTimes.ramadanEvents(ramadan.days, place.lat, place.lng, place.method, text(), number)), `janat-ramadan-${ramadan.hijriYear}.ics`, 'text/calendar;charset=utf-8'); toast(text().downloaded);
+}
+function locate() {
+  if (!navigator.geolocation) { toast(text().locationError); return; }
+  locating = true; render();
+  navigator.geolocation.getCurrentPosition(position => {
+    locating = false;
+    ramadanSettings = { lat: roundCoordinate(position.coords.latitude), lng: roundCoordinate(position.coords.longitude), tz: deviceTimeZone() };
+    persist('janat.ramadan', ramadanSettings); refresh(); toast(text().saved);
+  }, () => { locating = false; refresh(); toast(text().locationError); }, { timeout: 15000, maximumAge: 3600000 });
+}
+/** Re-rendering replaces every control, so focus returns to the one that was used, or the first fallback that exists. */
+function renderAndFocus(...selectors: string[]) {
+  render();
+  for (const selector of selectors) {
+    const element = document.querySelector<HTMLElement>(selector);
+    if (element) { element.focus({ preventScroll: true }); return; }
+  }
+}
+/** Late results (the times module, a location fix) must not tear down an open sheet: the page catches up when it closes. */
+let staleView = false;
+function refresh() {
+  if (!activeModal) { render(); return; }
+  staleView = true;
+  document.querySelectorAll<HTMLButtonElement>('#modal [data-action="download-ramadan"]').forEach(button => { button.disabled = !prayerTimes; });
+}
+function catchUp() {
+  if (!staleView || activeModal) return;
+  staleView = false;
+  const focused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const selector = focused?.id ? `#${CSS.escape(focused.id)}` : focused?.dataset.action ? `[data-action="${CSS.escape(focused.dataset.action)}"]` : '';
+  if (selector) renderAndFocus(selector); else render();
+}
 
 function resourcesView() {
   const categories = { all: text().resourceAll, quran: text().quran, hadith: text().hadithCategory, learning: text().learningCategory };
@@ -466,11 +603,12 @@ function markSalawat(root: Node) {
 }
 function render() {
   const lang = preferences.language;
+  const soon = view === 'home' && ramadanSoon();
   updateHead();
   app.innerHTML = `<a class="skip-link" href="#main" data-skip>${text().skipLink}</a><header class="site-header"><div class="header-inner"><a class="brand" href="${languagePath(lang)}" data-view="home" aria-label="Janat">${icon('moon-star')}<span>janat<span class="brand-dot">.</span></span><span class="brand-ar" lang="ar">جنّات</span></a>
-    <nav aria-label="${text().mainNav}">${(['home', 'calendar', 'logbook', 'quran', 'resources'] as View[]).map(item => `<button class="nav-link ${view === item ? 'active' : ''}" data-view="${item}" ${view === item ? 'aria-current="page"' : ''}>${icon(navIcons[item])}<span>${text()[item]}</span></button>`).join('')}</nav>
+    <nav aria-label="${text().mainNav}">${views.map(item => `<button class="nav-link ${view === item ? 'active' : ''}" data-view="${item}" ${view === item ? 'aria-current="page"' : ''}>${icon(navIcons[item])}<span>${text()[item]}</span></button>`).join('')}</nav>
     <div class="header-actions"><label class="language-select" title="${text().languageLabel}">${icon('globe')}<span class="language-current" aria-hidden="true">${shortLanguageNames[lang] ?? lang.toUpperCase()}</span><select id="language" aria-label="${text().languageLabel}">${languages.map(code => `<option value="${code}" lang="${code}" ${code === lang ? 'selected' : ''}>${languageInfo[code].name}</option>`).join('')}</select></label><button class="button primary header-reminder" data-action="reminders" aria-label="${text().reminders}" title="${text().reminders}">${icon('bell')}<span>${text().reminders}</span></button></div></div></header>
-    <main id="main" tabindex="-1">${view === 'home' ? `${hero()}<div class="container">${stats()}${upcoming()}${hadithBanner()}${power()}<section class="future-band"><div class="future-icon">${icon('book-open')}</div><div><span class="eyebrow green">${text().recitation} & ${text().revision}</span><h2>${text().quran}</h2><p>${text().quranIntro}</p><button class="text-button" data-view="quran">${text().quranHistory}${icon('arrow-right')}</button></div><span class="future-decoration" lang="ar">اقرأ</span></section>${widgetBand()}${faqSection(text())}</div>` : `<div class="container">${view === 'calendar' ? calendarView() : view === 'resources' ? resourcesView() : view === 'quran' ? quranView() : logbookView()}</div>`}</main>
+    <main id="main" tabindex="-1">${view === 'home' ? `${hero()}<div class="container">${stats()}${soon ? ramadanBand() : ''}${upcoming()}${hadithBanner()}${power()}<section class="future-band"><div class="future-icon">${icon('book-open')}</div><div><span class="eyebrow green">${text().recitation} & ${text().revision}</span><h2>${text().quran}</h2><p>${text().quranIntro}</p><button class="text-button" data-view="quran">${text().quranHistory}${icon('arrow-right')}</button></div><span class="future-decoration" lang="ar">اقرأ</span></section>${soon ? '' : ramadanBand()}${widgetBand()}${faqSection(text())}</div>` : `<div class="container">${view === 'calendar' ? calendarView() : view === 'resources' ? resourcesView() : view === 'ramadan' ? ramadanView() : view === 'quran' ? quranView() : logbookView()}</div>`}</main>
     <footer class="site-footer"><div class="container footer-main"><span class="footer-brand">${icon('moon-star')}janat.</span><span>${text().footer}</span><a class="text-button" href="${datesPath(lang)}">${icon('calendar-days')}${text().datesNav}</a><a class="text-button" href="${datesPath(lang, 'widget')}">${icon('code-xml')}${text().widgetNav}</a><button class="text-button" data-action="sources">${text().source}${icon('arrow-up-right')}</button><button class="text-button" data-action="consent-settings">${icon('cookie')}${text().consentSettings}</button><span class="privacy-footer">${icon('shield-check')}${text().privacyTitle}</span></div>
     <div class="container footer-languages"><span class="footer-languages-title">${icon('globe')}${text().languagesTitle}</span><ul>${languages.map(code => `<li><a href="${languageLink(code)}" hreflang="${code}" lang="${code}" data-language="${code}" ${code === lang ? 'aria-current="true"' : ''}>${languageInfo[code].name}</a></li>`).join('')}</ul></div></footer><dialog id="modal" aria-labelledby="modal-title"></dialog>`;
   bind(); createIcons({ icons }); markSalawat(app);
@@ -504,8 +642,15 @@ function exportRange(from: string, to: string) {
   if (!days.length) return;
   downloadFile(calendarInvite(days, text().inviteTitle, text().inviteBody), `janat-fasts-${from}-${to}.ics`, 'text/calendar;charset=utf-8'); toast(text().downloaded);
 }
-function subscriptionUrl(activity: 'fast' | 'quran') {
+type Activity = 'fast' | 'quran' | 'ramadan';
+function subscriptionUrl(activity: Activity) {
   const url = new URL('/api/calendar', location.origin);
+  if (activity === 'ramadan') {
+    const place = ramadanPlace();
+    const where: Record<string, string> = place.city ? { city: place.city.id } : { lat: String(place.lat), lng: String(place.lng) };
+    url.search = new URLSearchParams({ activity, lang: preferences.language, adjustment: String(preferences.adjustment), method: place.method, ...where }).toString();
+    return url.href;
+  }
   url.search = new URLSearchParams({ activity, lang: preferences.language, adjustment: String(preferences.adjustment), weekly: String(preferences.weekly), white: String(preferences.white) }).toString();
   return url.href;
 }
@@ -515,13 +660,13 @@ function providerChoices(links: Record<string, string>, subscription = false) {
 }
 const scheduleChip = (name: 'weekly' | 'white', glyph: string, label: string) => `<label class="schedule-chip"><input type="checkbox" name="${name}" data-schedule ${preferences[name] ? 'checked' : ''}>${icon(glyph)}<span>${label}</span>${icon('check')}</label>`;
 /** A subscription keeps every future day in the calendar, so it is offered first, with single events as the fallback. */
-function subscriptionChoices(activity: 'fast' | 'quran', options: { title?: string; body?: string; chips?: boolean } = {}) {
+function subscriptionChoices(activity: Activity, options: { title?: string; body?: string; chips?: boolean } = {}) {
   const url = subscriptionUrl(activity);
   return `<section class="subscription-options" data-activity="${activity}"><span class="badge recommended">${icon('sparkles')}${text().recommended}</span><h3>${options.title ?? text().subscribeCalendar}</h3>${options.body ? `<p class="subscription-body">${options.body}</p>` : ''}${options.chips ? `<div class="schedule-chips">${scheduleChip('weekly', 'sun', text().weekly)}${scheduleChip('white', 'moon', text().white)}</div>` : ''}${providerChoices(calendarSubscriptionLinks(url, 'Janat'), true)}<p class="feed-status fine-print" role="status">${text().feedChecking}</p><details class="feed-link"><summary>${text().otherCalendarApps}${icon('chevron-down')}</summary><div class="feed-url-row"><input class="subscription-url" aria-label="${text().subscriptionUrl}" dir="ltr" readonly value="${url}"><button type="button" class="icon-button" data-action="copy-feed" aria-label="${text().copyCalendarUrl}" title="${text().copyCalendarUrl}" disabled>${icon('copy')}</button></div></details></section><p class="fine-print">${text().feedNote}</p>`;
 }
 async function updateSubscriptionChoices(dialog: HTMLDialogElement) {
   const options = dialog.querySelector<HTMLElement>('.subscription-options'); if (!options) return;
-  const activity = options.dataset.activity as 'fast' | 'quran';
+  const activity = options.dataset.activity as Activity;
   const url = subscriptionUrl(activity);
   const input = options.querySelector<HTMLInputElement>('.subscription-url')!; input.value = url;
   const links = calendarSubscriptionLinks(url, 'Janat');
@@ -559,6 +704,8 @@ function openModal(kind: NonNullable<typeof activeModal>, date?: string) {
     content = `<span class="modal-icon">${icon('calendar-plus')}</span><h2 id="modal-title">${text().setReminder}</h2><p>${formatRange(start, end, { day: 'numeric', month: 'long', year: 'numeric' })} · ${hijriSpan(start, end)}</p>${subscriptionChoices('fast', { title: text().subscribeAll, body: text().subscribeAllBody, chips: true })}<p class="share-via">${text().onlyTheseDays}</p><ul class="add-days">${days}</ul><button class="button outline full" data-action="download-range">${icon('download')}${text().download}</button>`;
   }
   if (kind === 'quran-calendar') content = `<span class="modal-icon">${icon('book-open')}</span><h2 id="modal-title">${text().quranCalendar}</h2>${subscriptionChoices('quran')}<p class="fine-print">${text().feedPrivacy}</p><button class="button outline full" data-action="download-quran">${icon('download')}${text().download}</button><p class="fine-print">${text().quranCalendarNote}</p>`;
+  if (kind === 'ramadan-calendar') { const place = ramadanPlace(); content = `<span class="modal-icon">${icon('sunset')}</span><h2 id="modal-title">${text().subscribeTimes}</h2><p>${placeName(place)} · ${methodName(place.method)}</p>${subscriptionChoices('ramadan', { body: text().subscribeTimesBody })}${place.city ? '' : `<p class="fine-print">${text().locationNote}</p>`}<p class="fine-print">${text().timesNote}</p><button class="button outline full" data-action="download-ramadan" ${prayerTimes ? '' : 'disabled'}>${icon('download')}${text().download}</button>`; }
+  if (kind === 'qada-plan' && selected) content = `<span class="modal-icon">${icon('calendar-plus')}</span><h2 id="modal-title">${text().qadaPlan}</h2><p>${format(parseDate(selected), { dateStyle: 'full' })} · ${hijriLabel(parseDate(selected))}</p><div class="event-choices">${providerChoices(calendarEventLinks(parseDate(selected), text().qadaEventTitle, text().qadaEventBody))}</div><p class="fine-print">${text().eventNote}</p><button class="button outline full" data-action="download-qada" data-date="${selected}">${icon('download')}${text().download}</button>`;
   if (kind === 'settings') content = `<h2 id="modal-title">${text().calendarSettings}</h2><form id="settings-form"><label class="form-label" for="adjustment">${text().adjustment}</label><select id="adjustment" name="adjustment">${[-1, 0, 1].map(value => `<option value="${value}" ${preferences.adjustment === value ? 'selected' : ''}>${value === -1 ? text().minusDay : value === 0 ? text().sameDay : text().plusDay}</option>`).join('')}</select><p class="fine-print">${text().adjustHint}</p><button class="button primary full" type="submit">${icon('check')}${text().save}</button></form><button class="text-button danger delete-button" data-action="reset">${icon('trash-2')}${text().reset}</button>`;
   if (kind === 'record' && selected) content = `<span class="modal-icon">${icon('heart')}</span><h2 id="modal-title">${text().record}</h2><p>${format(parseDate(selected), { dateStyle: 'full' })}</p><p class="hijri-record">${hijriLabel(parseDate(selected))}</p><div class="record-options"><button class="button ${logbook[selected] === 'fasted' ? 'primary' : 'outline'}" data-status="fasted">${icon('check')}${text().fasted}</button><button class="button ${logbook[selected] === 'missed' ? 'selected-missed' : 'outline'}" data-status="missed">${icon('x')}${text().missed}</button></div>${logbook[selected] ? `<button class="text-button" data-status="clear">${text().undo}</button>` : ''}`;
   if (kind === 'share') content = shareContent();
@@ -598,8 +745,26 @@ function bind(root: ParentNode = app) {
     if (action === 'scene') { scene = Number(button.dataset.scene); render(); }
     if (action === 'prev-month' || action === 'next-month') { month = new Date(month.getFullYear(), month.getMonth() + (action === 'next-month' ? 1 : -1), 1, 12); render(); }
     if (action === 'today') { month = new Date(today().getFullYear(), today().getMonth(), 1, 12); render(); }
-    if (action === 'backup') downloadFile(JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), logbook, quranSessions, preferences }, null, 2), 'janat-logbook.json', 'application/json');
+    if (action === 'backup') downloadFile(JSON.stringify({ version: 3, exportedAt: new Date().toISOString(), logbook, quranSessions, preferences, ramadan: ramadanSettings, qada, khatm }, null, 2), 'janat-logbook.json', 'application/json');
     if (action === 'quran-invite') openModal('quran-calendar');
+    if (action === 'ramadan-invite') openModal('ramadan-calendar');
+    if (action === 'download-ramadan') exportRamadan();
+    if (action === 'locate') locate();
+    if (action === 'juz') {
+      const juz = Number(button.dataset.juz);
+      khatm = khatm.includes(juz) ? khatm.filter(read => read !== juz) : parseKhatm([...khatm, juz]);
+      persist('janat.khatm', khatm); renderAndFocus(`[data-action="juz"][data-juz="${juz}"]`);
+    }
+    if (action === 'reset-plan' && window.confirm(text().resetPlanConfirm)) { khatm = []; persist('janat.khatm', khatm); render(); }
+    if (action === 'qada-step') {
+      qada.owed = Math.min(MAX_OWED, Math.max(0, qada.owed + (Number(button.dataset.step) < 0 ? -1 : 1)));
+      persist('janat.qada', qada); renderAndFocus(`[data-action="qada-step"][data-step="${button.dataset.step}"]:not(:disabled)`, '#qada-owed');
+    }
+    if (action === 'qada-remove') { qada.made = qada.made.filter(key => key !== button.dataset.date); persist('janat.qada', qada); renderAndFocus('#qada-date'); toast(text().recorded); }
+    if (action === 'download-qada' && validKey(button.dataset.date ?? null)) {
+      const date = parseDate(button.dataset.date!);
+      downloadFile(calendarInvite([{ date, key: dateKey(date) }], text().qadaEventTitle, text().qadaEventBody, 'qada'), `janat-qada-${dateKey(date)}.ics`, 'text/calendar;charset=utf-8'); toast(text().downloaded);
+    }
     if (action === 'download-quran') {
       const days = Array.from({ length: 30 }, (_, offset) => { const date = addDays(today(), offset + 1); return { date, key: dateKey(date) }; });
       downloadFile(calendarInvite(days, text().quranInviteTitle, text().quranInviteBody, 'quran'), 'janat-quran-30-days.ics', 'text/calendar;charset=utf-8'); toast(text().downloaded);
@@ -640,6 +805,31 @@ function bind(root: ParentNode = app) {
     if (!validSession(session)) { toast(text().invalidSession); return; }
     quranSessions.push(session); persist('janat.quran', quranSessions); render(); toast(text().recorded);
   });
+  root.querySelector('#ramadan-city')?.addEventListener('change', event => {
+    const city = findCity((event.target as HTMLSelectElement).value);
+    if (city) { ramadanSettings = { city: city.id }; persist('janat.ramadan', ramadanSettings); renderAndFocus('#ramadan-city'); }
+  });
+  root.querySelector('#ramadan-method')?.addEventListener('change', event => {
+    const method = (event.target as HTMLSelectElement).value;
+    if (isMethod(method)) { ramadanSettings = { ...ramadanSettings, method }; persist('janat.ramadan', ramadanSettings); renderAndFocus('#ramadan-method'); }
+  });
+  root.querySelector('#qada-owed')?.addEventListener('change', event => {
+    const raw = (event.target as HTMLInputElement).value.trim(), owed = raw === '' ? Number.NaN : Number(raw);
+    if (Number.isInteger(owed) && owed >= 0 && owed <= MAX_OWED) { qada.owed = owed; persist('janat.qada', qada); }
+    renderAndFocus('#qada-owed');
+  });
+  root.querySelector('#qada-log')?.addEventListener('submit', event => {
+    event.preventDefault(); const key = new FormData(event.target as HTMLFormElement).get('date');
+    if (typeof key !== 'string' || !validKey(key) || key < '2000-01-01' || key > dateKey(today())) return;
+    if (!qadaAllowed(parseDate(key), preferences.adjustment)) { toast(text().qadaNotAllowed); return; }
+    if (qada.made.includes(key)) { toast(text().qadaDuplicate); return; }
+    qada.made = [...qada.made, key].sort(); persist('janat.qada', qada); renderAndFocus('#qada-date'); toast(text().recorded);
+  });
+  root.querySelector('#qada-plan')?.addEventListener('submit', event => {
+    event.preventDefault(); const key = new FormData(event.target as HTMLFormElement).get('date');
+    if (typeof key !== 'string' || !validKey(key) || key <= dateKey(today())) return;
+    if (qadaAllowed(parseDate(key), preferences.adjustment)) openModal('qada-plan', key); else toast(text().qadaNotAllowed);
+  });
   root.querySelector('#quran-goal')?.addEventListener('submit', event => {
     event.preventDefault(); const goal = Number(new FormData(event.target as HTMLFormElement).get('goal'));
     if (!Number.isInteger(goal) || goal < 1 || goal > 1440) return;
@@ -661,6 +851,7 @@ function bind(root: ParentNode = app) {
     if (shareImageUrl) { URL.revokeObjectURL(shareImageUrl); shareImageUrl = ''; }
     delete dialog.dataset.kind;
     syncHadith();
+    catchUp();
   });
 }
 function ensureFont(language: Language) {

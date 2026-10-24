@@ -387,6 +387,120 @@ test('other websites can embed the fasting calendar and copy its code', async ({
   expect(errors).toEqual([]);
 });
 
+test.describe('Ramadan companion', () => {
+  test.use({ geolocation: { latitude: 51.5203, longitude: -0.0753 }, permissions: ['geolocation'] });
+
+  test('subscribes to suhoor and iftar times for a city or the visitor’s location', async ({ page, request }, testInfo) => {
+    await expect(page.locator('nav .nav-link')).toHaveCount(6);
+    await page.locator('.ramadan-band button', { hasText: 'Open the Ramadan companion' }).click();
+    await expect(page).toHaveURL(/#ramadan$/);
+    await expect(page.locator('h1')).toHaveText('Ramadan 1448');
+    await expect(page.locator('nav [data-view="ramadan"]')).toHaveClass(/active/);
+    await page.locator('#ramadan-city').selectOption('london');
+    await page.locator('#ramadan-method').selectOption('MoonsightingCommittee');
+    await expect(page.locator('.fast-times-day')).toContainText('Monday 8 February');
+    await expect(page.locator('.time-tile strong')).toHaveText(['5:51', '17:05']);
+    await expect(page.locator('.timetable tbody tr')).toHaveCount(29);
+    expect(await fitsViewport(page)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath('ramadan.png'), fullPage: true });
+
+    await page.locator('[data-action="ramadan-invite"]').click();
+    const google = page.locator('dialog .subscription-options [data-provider="google"]');
+    await expect(google).toHaveAttribute('aria-disabled', 'false', { timeout: 15000 });
+    const feed = new URL(new URL((await google.getAttribute('href'))!).searchParams.get('cid')!.replace(/^webcal:/, 'http:'));
+    expect(Object.fromEntries(feed.searchParams)).toMatchObject({ activity: 'ramadan', city: 'london', method: 'MoonsightingCommittee', lang: 'en' });
+    const response = await request.get(feed.href);
+    expect(response.status()).toBe(200);
+    const body = (await response.text()).replace(/\r\n /g, '');
+    expect(body).toContain('X-WR-CALNAME:Janat | Suhoor & iftar times · London');
+    expect(body).toContain('SUMMARY:Iftar at Maghrib');
+    const download = page.waitForEvent('download');
+    await page.locator('dialog [data-action="download-ramadan"]').click();
+    expect((await download).suggestedFilename()).toBe('janat-ramadan-1448.ics');
+    await page.keyboard.press('Escape');
+
+    await page.locator('[data-action="locate"]').click();
+    await expect(page.locator('#ramadan-city')).toHaveValue('');
+    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('janat.ramadan')))!)).toMatchObject({ lat: 51.52, lng: -0.08 });
+    await expect(page.locator('.ramadan-times .fine-print', { hasText: 'stays on this device' })).toBeVisible();
+    await page.locator('[data-action="ramadan-invite"]').click();
+    await expect(google).toHaveAttribute('aria-disabled', 'false', { timeout: 15000 });
+    const located = new URL(new URL((await google.getAttribute('href'))!).searchParams.get('cid')!.replace(/^webcal:/, 'http:'));
+    expect(located.searchParams.get('lat')).toBe('51.52');
+    expect(located.searchParams.get('lng')).toBe('-0.08');
+    expect(located.searchParams.has('city')).toBe(false);
+  });
+
+  test('keeps a 30-day Quran plan and counts make-up fasts on allowed days', async ({ page }) => {
+    await page.goto('/#ramadan');
+    const juz = page.locator('[data-action="juz"][data-juz="1"]');
+    await juz.click();
+    await expect(juz).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.plan-progress span')).toHaveText('1 of 30 juz read');
+    await expect(page.locator('.quran-plan a[href="https://quran.com/juz/2"]')).toBeVisible();
+    await page.reload();
+    await expect(page.locator('[data-action="juz"][data-juz="1"]')).toHaveAttribute('aria-pressed', 'true');
+
+    const toast = page.locator('.toast');
+    const plus = page.locator('[data-action="qada-step"][data-step="1"]'), owed = page.locator('#qada-owed');
+    for (let step = 0; step < 2; step++) await plus.click();
+    // Each press re-renders the stepper; focus stays on the button so the keyboard can keep counting.
+    await expect(plus).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(owed).toHaveValue('3');
+    await expect(plus).toBeFocused();
+    await owed.fill('');
+    await owed.press('Tab');
+    await expect(owed).toHaveValue('3');
+    await expect(page.locator('#qada-date')).toHaveValue('2026-10-19');
+    await page.locator('#qada-log button[type="submit"]').click();
+    await expect(page.locator('.qada-list li')).toHaveCount(1);
+    await expect(page.locator('.qada-stat strong')).toHaveText(['1', '2']);
+    await page.locator('#qada-log button[type="submit"]').click();
+    await expect(toast).toHaveText('This day is already logged.');
+    await page.locator('#qada-date').fill('2026-03-01');
+    await page.locator('#qada-log button[type="submit"]').click();
+    await expect(toast).toHaveText('Make-up fasts are not kept in Ramadan, on Eid or on the days of Tashriq.');
+    await expect(page.locator('.qada-list li')).toHaveCount(1);
+
+    await page.locator('#qada-plan-date').fill('2027-02-20');
+    await page.locator('#qada-plan button[type="submit"]').click();
+    await expect(toast).toHaveText(/not kept in Ramadan/);
+    await page.locator('#qada-plan-date').fill('2026-10-26');
+    await page.locator('#qada-plan button[type="submit"]').click();
+    await expect(page.locator('#modal')).toHaveAttribute('data-kind', 'qada-plan');
+    const event = new URL((await page.locator('dialog .event-choices [data-provider="google"]').getAttribute('href'))!);
+    expect(event.searchParams.get('dates')).toBe('20261026/20261027');
+    expect(event.searchParams.get('text')).toBe('Make-up fast');
+    await page.keyboard.press('Escape');
+
+    await page.locator('[data-action="qada-remove"]').click();
+    await expect(page.locator('.qada-list')).toHaveCount(0);
+    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('janat.qada')))!)).toEqual({ owed: 3, made: [] });
+  });
+
+  test('keeps an open sheet when a location fix arrives late', async ({ page }) => {
+    await page.goto('/#ramadan');
+    await page.evaluate(() => {
+      navigator.geolocation.getCurrentPosition = success => { (window as unknown as { deliverFix: () => void }).deliverFix = () => success({ coords: { latitude: 21.4225, longitude: 39.8262 } } as GeolocationPosition); };
+    });
+    await page.locator('[data-action="locate"]').click();
+    await expect(page.locator('[data-action="locate"]')).toBeDisabled();
+    const invite = page.locator('[data-action="ramadan-invite"]'), dialog = page.locator('#modal');
+    await invite.click();
+    await expect(dialog).toHaveAttribute('data-kind', 'ramadan-calendar');
+    await page.evaluate(() => (window as unknown as { deliverFix: () => void }).deliverFix());
+    await expect(page.locator('.toast')).toHaveText('Preferences saved');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator('[data-action="download-ramadan"]')).toBeEnabled();
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(page.locator('#ramadan-city')).toHaveValue('');
+    await expect(page.locator('[data-action="locate"]')).toBeEnabled();
+    await expect(invite).toBeFocused();
+  });
+});
+
 test('going back keeps the language the visitor chose', async ({ page }) => {
   await page.goto('/ur/');
   await page.locator('nav [data-view="calendar"]').click();
