@@ -361,8 +361,13 @@ test('other websites can embed the fasting calendar and copy its code', async ({
   await expect(page.locator('.row')).toHaveCount(6);
   await expect(page.locator('.add-all')).toHaveAttribute('href', /\?add=2026-10-19&to=2026-10-29&/);
 
+  await page.goto('/ur/');
+  await expect(page.locator('.widget-band a')).toHaveAttribute('href', '/ur/fasting/widget/');
+  await expect(page.locator('.site-footer a[href="/ur/fasting/widget/"]')).toHaveText('ویب سائٹ وجیٹ');
   await page.goto('/fasting/');
-  await page.locator('.widget-promo').click();
+  await expect(page.locator('.widget-promo')).toHaveAttribute('href', '/fasting/widget/');
+  await page.goto('/en/');
+  await page.locator('.widget-band').getByRole('link', { name: 'Get the code' }).click();
   await expect(page).toHaveURL(/\/fasting\/widget\/$/);
   await expect(page.locator('h1')).toHaveText('Add a Sunnah fasting calendar to your website');
   const preview = page.locator('.builder-stage iframe');
@@ -373,7 +378,7 @@ test('other websites can embed the fasting calendar and copy its code', async ({
   await page.getByRole('radio', { name: /Sidebar/ }).check();
   await expect(preview).toHaveAttribute('src', '/embed/?view=list');
   await expect(page.frameLocator('.builder-stage iframe').locator('.row')).toHaveCount(6);
-  expect(await preview.evaluate(frame => getComputedStyle(frame).maxWidth)).toBe('320px');
+  await expect(preview).toHaveCSS('max-width', '320px');
   await expect(code).toHaveValue(/src="https:\/\/janat\.uably\.com\/embed\/\?view=list".*max-width:320px;height:600px/);
   await expect(code).toHaveValue(/<a href="https:\/\/janat\.uably\.com\/fasting\/">Sunnah fasting calendar · Janat<\/a>/);
   await page.getByRole('button', { name: 'Copy code' }).click();

@@ -222,6 +222,11 @@ const fr: Messages = {
   hadithFalseSpeech: 'Le Prophète ﷺ a dit : « Celui qui ne délaisse pas la parole mensongère et le fait d’agir selon elle, Allah n’a nul besoin qu’il délaisse sa nourriture et sa boisson. »',
   hadithFriday: 'Le Prophète ﷺ a dit : « Que nul d’entre vous ne jeûne le vendredi, à moins de jeûner aussi la veille ou le lendemain. »',
   datesNav: 'Dates de jeûne',
+  widgetNav: 'Widget pour site',
+  widgetEyebrow: 'Widget gratuit',
+  widgetTitle: 'Ajoutez un calendrier des jeûnes sunna à votre site',
+  widgetLead: 'Affichez les jours blancs, les lundis et jeudis, le Ramadan, Arafa et Achoura sur le site de votre mosquée, école ou association, en 10 langues. Gratuit, sans cookies ni pistage.',
+  widgetCta: 'Obtenir le code',
 };
 
 export default fr;

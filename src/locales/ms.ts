@@ -222,6 +222,11 @@ const ms: Messages = {
   hadithFalseSpeech: 'Nabi ﷺ bersabda: “Sesiapa yang tidak meninggalkan perkataan dusta dan beramal dengannya, maka Allah tidak berhajat kepada perbuatannya meninggalkan makanan dan minumannya.”',
   hadithFriday: 'Nabi ﷺ bersabda: “Janganlah seorang pun daripada kamu berpuasa pada hari Jumaat, kecuali dia juga berpuasa sehari sebelumnya atau sehari selepasnya.”',
   datesNav: 'Tarikh puasa',
+  widgetNav: 'Widget laman web',
+  widgetEyebrow: 'Widget percuma',
+  widgetTitle: 'Pasang kalendar puasa sunat di laman web anda',
+  widgetLead: 'Paparkan hari putih, Isnin dan Khamis, Ramadan, Arafah dan Asyura di laman web masjid, sekolah atau komuniti anda, dalam 10 bahasa. Percuma, tanpa kuki dan tanpa penjejakan.',
+  widgetCta: 'Dapatkan kod',
 };
 
 export default ms;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import template from '../index.html?raw';
-import { languageInfo, languages } from './languages';
+import { datesPath, languageInfo, languages } from './languages';
 import { messages } from './locales';
 import { headTags, localizeHtml, pageUrl, SITE_URL, sitemap, structuredData } from './seo';
 
@@ -14,6 +14,8 @@ describe('search metadata', () => {
     expect(html.match(/<title>/g)).toHaveLength(1);
     expect(html.match(/<h1>/g)).toHaveLength(1);
     expect(html).toContain(copy.greeting);
+    expect(html).toContain(`href="${datesPath(language)}">${copy.datesNav}</a>`);
+    expect(html).toContain(`href="${datesPath(language, 'widget')}">${copy.widgetNav}</a>`);
     expect(html).toContain(`<meta property="og:locale" content="${languageInfo[language].ogLocale}" />`);
     for (const code of languages) expect(html).toContain(`hreflang="${code}" href="${pageUrl(code)}"`);
     expect(html).toContain(`hreflang="x-default" href="${SITE_URL}/"`);

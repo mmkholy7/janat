@@ -222,6 +222,11 @@ const es: Messages = {
   hadithFalseSpeech: 'El Profeta ﷺ dijo: «Quien no abandone las palabras falsas y el obrar conforme a ellas, Allah no tiene ninguna necesidad de que abandone su comida y su bebida».',
   hadithFriday: 'El Profeta ﷺ dijo: «Que ninguno de vosotros ayune en viernes, a menos que ayune también el día anterior o el día posterior».',
   datesNav: 'Fechas de ayuno',
+  widgetNav: 'Widget para webs',
+  widgetEyebrow: 'Widget gratuito',
+  widgetTitle: 'Añade un calendario de ayunos sunnah a tu web',
+  widgetLead: 'Muestra los días blancos, los lunes y jueves, Ramadán, Arafa y Ashura en la web de tu mezquita, escuela o comunidad, en 10 idiomas. Gratis, sin cookies y sin rastreo.',
+  widgetCta: 'Obtener el código',
 };
 
 export default es;

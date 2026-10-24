@@ -104,7 +104,7 @@ export function staticApp(language: Language) {
   const links = languages.map(code => `<li><a href="${languageLink(code)}" hreflang="${code}" lang="${code}"${code === language ? ' aria-current="true"' : ''}>${languageInfo[code].name}</a></li>`).join('');
   return `<div class="static-shell">
       <header class="site-header"><div class="header-inner"><a class="brand" href="${languagePath(language)}" aria-label="Janat"><span>janat<span class="brand-dot">.</span></span><span class="brand-ar" lang="ar">جنّات</span></a></div></header>
-      <main id="main"><section class="static-hero"><div class="container"><p class="eyebrow light">${copy.tagline}</p><h1>${copy.greeting}<br><span>${copy.greetingEnd}</span></h1><p class="hero-intro">${copy.intro}</p><p class="static-summary">${copy.seoDescription}</p><a class="button pale static-dates" href="${datesPath(language)}">${copy.datesNav}</a></div></section>
+      <main id="main"><section class="static-hero"><div class="container"><p class="eyebrow light">${copy.tagline}</p><h1>${copy.greeting}<br><span>${copy.greetingEnd}</span></h1><p class="hero-intro">${copy.intro}</p><p class="static-summary">${copy.seoDescription}</p><div class="static-links"><a class="button pale" href="${datesPath(language)}">${copy.datesNav}</a><a class="button dates-ghost" href="${datesPath(language, 'widget')}">${copy.widgetNav}</a></div></div></section>
       <div class="container">${faqSection(copy)}</div></main>
       <footer class="site-footer"><div class="container footer-languages"><span class="footer-languages-title">${copy.languagesTitle}</span><ul>${links}</ul></div></footer>
     </div>`;

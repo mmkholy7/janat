@@ -220,6 +220,11 @@ const en = {
   hadithFalseSpeech: 'The Prophet ﷺ said: “Whoever does not give up false speech and acting upon it, Allah has no need of them giving up their food and drink.”',
   hadithFriday: 'The Prophet ﷺ said: “None of you should fast on a Friday, unless he also fasts the day before it or the day after it.”',
   datesNav: 'Fasting dates',
+  widgetNav: 'Website widget',
+  widgetEyebrow: 'Free widget',
+  widgetTitle: 'Add a Sunnah fasting calendar to your website',
+  widgetLead: 'Show the White Days, Mondays and Thursdays, Ramadan, Arafah and Ashura on your mosque, school or community website, in 10 languages. Free, with no cookies and no tracking.',
+  widgetCta: 'Get the code',
 };
 
 export type Messages = typeof en;
