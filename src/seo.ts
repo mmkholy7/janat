@@ -1,11 +1,11 @@
 import { faqEntries, faqSection } from './faq';
-import { fontUrl, languageInfo, languageLink, languagePath, languages, SITE_URL, type Language } from './languages';
+import { datesPath, fontUrl, languageInfo, languageLink, languagePath, languages, SITE_URL, type Language } from './languages';
 import { messages } from './locales';
 
 export { SITE_URL };
 export const OG_IMAGE = `${SITE_URL}/og-image.jpg`;
 
-const escapeHtml = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+export const escapeHtml = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const escapeXml = (value: string) => escapeHtml(value).replace(/'/g, '&apos;');
 
 export const pageUrl = (language: Language) => `${SITE_URL}${languagePath(language)}`;
@@ -55,25 +55,33 @@ export function structuredData(language: Language) {
   };
 }
 
+/** A page that exists in every language: its title, description, URL per language and JSON-LD. */
+export type MetaPage = { title: string; description: string; url: (language: Language) => string; jsonLd: unknown };
+
 export function headTags(language: Language, extra: string[] = []) {
   const copy = messages[language];
+  return metaTags(language, { title: copy.seoTitle, description: copy.seoDescription, url: pageUrl, jsonLd: structuredData(language) }, extra);
+}
+
+export function metaTags(language: Language, page: MetaPage, extra: string[] = []) {
+  const copy = messages[language];
   const info = languageInfo[language];
-  const title = escapeHtml(copy.seoTitle);
-  const description = escapeHtml(copy.seoDescription);
+  const title = escapeHtml(page.title);
+  const description = escapeHtml(page.description);
   const font = fontUrl(language);
   return [
     `<title>${title}</title>`,
     `<meta name="description" content="${description}" />`,
-    `<link rel="canonical" href="${pageUrl(language)}" />`,
-    ...languages.map(code => `<link rel="alternate" hreflang="${code}" href="${pageUrl(code)}" />`),
-    `<link rel="alternate" hreflang="x-default" href="${pageUrl('en')}" />`,
+    `<link rel="canonical" href="${page.url(language)}" />`,
+    ...languages.map(code => `<link rel="alternate" hreflang="${code}" href="${page.url(code)}" />`),
+    `<link rel="alternate" hreflang="x-default" href="${page.url('en')}" />`,
     '<meta name="application-name" content="Janat" />',
     '<meta name="apple-mobile-web-app-title" content="Janat" />',
     '<meta property="og:type" content="website" />',
     '<meta property="og:site_name" content="Janat" />',
     `<meta property="og:title" content="${title}" />`,
     `<meta property="og:description" content="${description}" />`,
-    `<meta property="og:url" content="${pageUrl(language)}" />`,
+    `<meta property="og:url" content="${page.url(language)}" />`,
     `<meta property="og:image" content="${OG_IMAGE}" />`,
     '<meta property="og:image:width" content="1200" />',
     '<meta property="og:image:height" content="630" />',
@@ -87,7 +95,7 @@ export function headTags(language: Language, extra: string[] = []) {
     `<meta name="twitter:image:alt" content="${escapeHtml(copy.ogImageAlt)}" />`,
     ...(font ? [`<link rel="stylesheet" href="${font}" data-font="${language}" />`] : []),
     ...extra,
-    `<script type="application/ld+json">${JSON.stringify(structuredData(language)).replace(/</g, '\\u003c')}</script>`,
+    `<script type="application/ld+json">${JSON.stringify(page.jsonLd).replace(/</g, '\\u003c')}</script>`,
   ].join('\n    ');
 }
 
@@ -96,7 +104,7 @@ export function staticApp(language: Language) {
   const links = languages.map(code => `<li><a href="${languageLink(code)}" hreflang="${code}" lang="${code}"${code === language ? ' aria-current="true"' : ''}>${languageInfo[code].name}</a></li>`).join('');
   return `<div class="static-shell">
       <header class="site-header"><div class="header-inner"><a class="brand" href="${languagePath(language)}" aria-label="Janat"><span>janat<span class="brand-dot">.</span></span><span class="brand-ar" lang="ar">جنّات</span></a></div></header>
-      <main id="main"><section class="static-hero"><div class="container"><p class="eyebrow light">${copy.tagline}</p><h1>${copy.greeting}<br><span>${copy.greetingEnd}</span></h1><p class="hero-intro">${copy.intro}</p><p class="static-summary">${copy.seoDescription}</p></div></section>
+      <main id="main"><section class="static-hero"><div class="container"><p class="eyebrow light">${copy.tagline}</p><h1>${copy.greeting}<br><span>${copy.greetingEnd}</span></h1><p class="hero-intro">${copy.intro}</p><p class="static-summary">${copy.seoDescription}</p><a class="button pale static-dates" href="${datesPath(language)}">${copy.datesNav}</a></div></section>
       <div class="container">${faqSection(copy)}</div></main>
       <footer class="site-footer"><div class="container footer-languages"><span class="footer-languages-title">${copy.languagesTitle}</span><ul>${links}</ul></div></footer>
     </div>`;
@@ -112,10 +120,13 @@ export function localizeHtml(html: string, language: Language, extraHead: string
     .replace('<!--seo:app-->', () => staticApp(language));
 }
 
-export function sitemap(lastModified: Date) {
+/** The home page in every language, then each extra page (given as its URL per language) in every language. */
+export function sitemap(lastModified: Date, extra: ((language: Language) => string)[] = []) {
   const date = lastModified.toISOString().slice(0, 10);
-  const alternates = [...languages.map(code => [code, pageUrl(code)]), ['x-default', pageUrl('en')]]
-    .map(([code, href]) => `    <xhtml:link rel="alternate" hreflang="${code}" href="${escapeXml(href)}" />`).join('\n');
-  const urls = languages.map(code => `  <url>\n    <loc>${escapeXml(pageUrl(code))}</loc>\n    <lastmod>${date}</lastmod>\n${alternates}\n  </url>`).join('\n');
+  const urls = [pageUrl, ...extra].map(url => {
+    const alternates = [...languages.map(code => [code, url(code)]), ['x-default', url('en')]]
+      .map(([code, href]) => `    <xhtml:link rel="alternate" hreflang="${code}" href="${escapeXml(href)}" />`).join('\n');
+    return languages.map(code => `  <url>\n    <loc>${escapeXml(url(code))}</loc>\n    <lastmod>${date}</lastmod>\n${alternates}\n  </url>`).join('\n');
+  }).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls}\n</urlset>\n`;
 }

@@ -219,6 +219,7 @@ const en = {
   hadithFeedFasting: 'The Prophet ﷺ said: “Whoever gives a fasting person food to break the fast will have a reward like theirs, without the fasting person’s reward being reduced at all.”',
   hadithFalseSpeech: 'The Prophet ﷺ said: “Whoever does not give up false speech and acting upon it, Allah has no need of them giving up their food and drink.”',
   hadithFriday: 'The Prophet ﷺ said: “None of you should fast on a Friday, unless he also fasts the day before it or the day after it.”',
+  datesNav: 'Fasting dates',
 };
 
 export type Messages = typeof en;

@@ -221,6 +221,7 @@ const es: Messages = {
   hadithFeedFasting: 'El Profeta ﷺ dijo: «Quien dé de comer a un ayunante para que rompa su ayuno tendrá una recompensa como la suya, sin que la recompensa del ayunante disminuya en nada».',
   hadithFalseSpeech: 'El Profeta ﷺ dijo: «Quien no abandone las palabras falsas y el obrar conforme a ellas, Allah no tiene ninguna necesidad de que abandone su comida y su bebida».',
   hadithFriday: 'El Profeta ﷺ dijo: «Que ninguno de vosotros ayune en viernes, a menos que ayune también el día anterior o el día posterior».',
+  datesNav: 'Fechas de ayuno',
 };
 
 export default es;

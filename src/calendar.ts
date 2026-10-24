@@ -47,9 +47,10 @@ export function fastDaysBetween(start: Date, end: Date, adjustment = 0): FastDay
   return result;
 }
 
-export function calendarEventLinks(date: Date, title: string, description: string) {
+/** An all-day event from `date` to `last` (inclusive, default the same day). */
+export function calendarEventLinks(date: Date, title: string, description: string, last = date) {
   const start = dateKey(date);
-  const end = dateKey(addDays(date, 1));
+  const end = dateKey(addDays(last, 1));
   const google = new URL('https://calendar.google.com/calendar/render');
   google.search = new URLSearchParams({ action: 'TEMPLATE', text: title, details: description, dates: `${start.replace(/-/g, '')}/${end.replace(/-/g, '')}` }).toString();
   const outlookParams = new URLSearchParams({ path: '/calendar/action/compose', rru: 'addevent', subject: title, body: description, startdt: start, enddt: end, allday: 'true' });
@@ -74,14 +75,16 @@ export function calendarSubscriptionLinks(feedUrl: string, title: string) {
   };
 }
 
-export function calendarInvite(days: Pick<FastDay, 'date' | 'key'>[], title: string, description: string, activity: 'fast' | 'quran' = 'fast'): string {
+/** One all-day event per entry; `last` makes an entry span several days. */
+export function calendarInvite(days: (Pick<FastDay, 'date' | 'key'> & { last?: Date })[], title: string, description: string, activity: 'fast' | 'quran' = 'fast'): string {
   const escape = (text: string) => text.replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Janat//Activity Calendar//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', `X-WR-CALNAME:${escape(title)}`];
   for (const day of days) {
-    lines.push('BEGIN:VEVENT', `UID:${activity}-${day.key}@janat.local`, `DTSTAMP:${stamp}`,
+    const end = dateKey(addDays(day.last ?? day.date, 1));
+    lines.push('BEGIN:VEVENT', `UID:${activity}-${day.key}${day.last ? `-${dateKey(day.last)}` : ''}@janat.local`, `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${day.key.replace(/-/g, '')}`,
-      `DTEND;VALUE=DATE:${dateKey(addDays(day.date, 1)).replace(/-/g, '')}`,
+      `DTEND;VALUE=DATE:${end.replace(/-/g, '')}`,
       `SUMMARY:${escape(title)}`, `DESCRIPTION:${escape(description)}`,
       'BEGIN:VALARM', 'TRIGGER:-PT8H', 'ACTION:DISPLAY', `DESCRIPTION:${escape(title)}`, 'END:VALARM', 'END:VEVENT');
   }

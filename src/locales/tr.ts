@@ -221,6 +221,7 @@ const tr: Messages = {
   hadithFeedFasting: 'Peygamber Efendimiz ﷺ şöyle buyurdu: “Kim bir oruçluya iftar ettirirse, ona oruçlunun sevabı kadar sevap vardır; oruçlunun sevabından da hiçbir şey eksilmez.”',
   hadithFalseSpeech: 'Peygamber Efendimiz ﷺ şöyle buyurdu: “Kim yalan söz söylemeyi ve yalanla iş görmeyi bırakmazsa, Allah’ın onun yemesini ve içmesini bırakmasına ihtiyacı yoktur.”',
   hadithFriday: 'Peygamber Efendimiz ﷺ şöyle buyurdu: “Sizden biri, bir gün öncesinde ya da bir gün sonrasında da oruç tutmadıkça cuma günü oruç tutmasın.”',
+  datesNav: 'Oruç günleri',
 };
 
 export default tr;

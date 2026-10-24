@@ -44,3 +44,6 @@ export function detectLanguage(preferred: readonly string[]): Language {
   }
   return 'en';
 }
+
+/** Pre-rendered fasting-date pages: /fasting/2026-11/ in English, /ur/fasting/2026-11/ in Urdu. */
+export const datesPath = (language: Language, slug = '') => `${language === 'en' ? '' : `/${language}`}/fasting/${slug ? `${slug}/` : ''}`;
