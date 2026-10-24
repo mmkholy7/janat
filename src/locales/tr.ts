@@ -222,6 +222,11 @@ const tr: Messages = {
   hadithFalseSpeech: 'Peygamber Efendimiz ﷺ şöyle buyurdu: “Kim yalan söz söylemeyi ve yalanla iş görmeyi bırakmazsa, Allah’ın onun yemesini ve içmesini bırakmasına ihtiyacı yoktur.”',
   hadithFriday: 'Peygamber Efendimiz ﷺ şöyle buyurdu: “Sizden biri, bir gün öncesinde ya da bir gün sonrasında da oruç tutmadıkça cuma günü oruç tutmasın.”',
   datesNav: 'Oruç günleri',
+  widgetNav: 'Site için widget',
+  widgetEyebrow: 'Ücretsiz widget',
+  widgetTitle: 'Sitenize sünnet oruç takvimi ekleyin',
+  widgetLead: 'Eyyam-ı biyz’ı, pazartesi ve perşembeyi, Ramazan’ı, Arefe’yi ve Âşûrâ’yı cami, okul veya topluluk sitenizde 10 dilde gösterin. Ücretsiz, çerezsiz ve takipsiz.',
+  widgetCta: 'Kodu al',
 };
 
 export default tr;

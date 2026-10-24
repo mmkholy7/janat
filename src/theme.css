@@ -123,7 +123,7 @@ input { accent-color: var(--gold); }
 .icon-button { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface); color: var(--ink); transition: background .2s, border-color .2s; }
 .icon-button:not(:disabled):hover { background: var(--raised); }
 .icon-button:disabled { opacity: .5; }
-html[dir=rtl] :is(.text-button, .hero-link, .card-action, .month-controls .icon-button, .share-step .icon-button, .hadith-controls [data-action=hadith-prev], .hadith-controls [data-action=hadith-next], .resource-link, .recent-row) svg { transform: scaleX(-1); }
+html[dir=rtl] :is(.text-button, .hero-link, .card-action, .month-controls .icon-button, .share-step .icon-button, .hadith-controls [data-action=hadith-prev], .hadith-controls [data-action=hadith-next], .resource-link, .recent-row, .widget-band .button) svg { transform: scaleX(-1); }
 
 /* ---------- Header (always midnight) ---------- */
 .site-header { position: sticky; top: 0; z-index: 30; color: var(--night-ink); }
@@ -321,6 +321,15 @@ html[dir=rtl] .hadith-progress span { transform-origin: right; }
 .future-icon svg { width: 28px; height: 28px; stroke-width: 1.4; }
 .future-band h2 { margin-top: 4px; font-size: 22px; }
 .future-band p { max-width: 62ch; margin-top: 6px; font-size: 14.5px; line-height: 1.7; color: var(--muted); }
+.widget-band { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; gap: 22px; margin-top: 24px; padding: 30px clamp(20px, 4vw, 44px); border-radius: var(--radius-lg); background: radial-gradient(480px 240px at 92% 0%, #e2bd6e2e, transparent 70%), linear-gradient(155deg, var(--night-2), var(--night) 62%, #070d22); color: var(--night-ink); box-shadow: 0 24px 60px #0b143033; }
+.widget-band-icon { display: grid; place-items: center; width: 58px; height: 58px; flex-shrink: 0; border-radius: 18px; background: #e2bd6e1f; color: var(--gold-bright); }
+.widget-band-icon svg { width: 28px; height: 28px; stroke-width: 1.5; }
+.widget-band-text { flex: 1; min-width: 0; }
+.widget-band .eyebrow { color: var(--gold-bright); }
+.widget-band h2 { margin-top: 4px; font-size: 22px; color: var(--night-ink); }
+.widget-band p { max-width: 62ch; margin-top: 6px; font-size: 14.5px; line-height: 1.7; color: var(--night-muted); }
+.widget-band .button { flex-shrink: 0; }
+.widget-band-decoration { position: absolute; z-index: -1; bottom: -18px; inset-inline-end: 30px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 120px; font-weight: 700; line-height: 1; color: var(--gold-bright); opacity: .07; user-select: none; pointer-events: none; }
 .future-decoration { position: absolute; z-index: -1; top: 50%; inset-inline-end: 36px; transform: translateY(-50%); font-family: var(--arabic); font-size: 110px; line-height: 1; color: var(--gold); opacity: .12; user-select: none; pointer-events: none; }
 
 /* ---------- FAQ ---------- */
@@ -622,6 +631,7 @@ html[lang=ur] :is(h1, h2, h3, .button, .badge, .eyebrow, .text-button, .nav-link
 html[lang=ur] .power-body p { line-height: 2.35; }
 html[lang=ur] .consent p { line-height: 2.1; }
 html[lang=ur] :is(h1, h2, h3) { font-weight: 600; }
+html[lang=ur] .widget-band p { line-height: 2.1; }
 .salawat { font-family: var(--arabic); font-style: normal; font-weight: 400; line-height: 1; }
 html[lang=ur] .hero h1 { font-size: 40px; line-height: 1.9; }
 html[lang=ur] .next-fast h2 { font-size: 30px; line-height: 1.9; }
@@ -753,6 +763,9 @@ html[dir=rtl] .hero h1 span, html[lang=bn] .hero h1 span { font-weight: 700; }
   /* Bands */
   .future-band { flex-direction: column; align-items: flex-start; gap: 14px; margin-top: 40px; padding: 24px 20px; border-radius: 22px; }
   .future-decoration { top: 18px; transform: none; font-size: 72px; }
+  .widget-band { flex-direction: column; align-items: flex-start; gap: 14px; padding: 24px 20px; border-radius: 22px; }
+  .widget-band .button { width: 100%; }
+  .widget-band-decoration { font-size: 80px; }
   .faq-section { margin-block: 40px 48px; padding: 28px 18px; border-radius: 22px; }
   .faq-section h2 { font-size: 25px; }
   .faq-item summary { padding: 16px; font-size: 15px; }
@@ -842,7 +855,7 @@ nav.dates-breadcrumb { position: static; display: block; margin: 0 0 18px; paddi
 .dates-breadcrumb a { text-underline-offset: 3px; transition: color .2s; }
 .dates-breadcrumb a:hover { color: var(--night-ink); text-decoration: underline; }
 .dates-breadcrumb [aria-current] { font-weight: 600; color: var(--gold-bright); }
-.static-dates { margin-top: 24px; }
+.static-links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
 
 .dates-body { padding-bottom: 64px; }
 .dates-section { padding-top: 56px; }

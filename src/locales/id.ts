@@ -222,6 +222,11 @@ const id: Messages = {
   hadithFalseSpeech: 'Nabi ﷺ bersabda: “Barang siapa tidak meninggalkan perkataan dusta dan mengamalkannya, maka Allah tidak butuh ia meninggalkan makanan dan minumannya.”',
   hadithFriday: 'Nabi ﷺ bersabda: “Janganlah salah seorang di antara kalian berpuasa pada hari Jumat, kecuali ia juga berpuasa sehari sebelumnya atau sehari sesudahnya.”',
   datesNav: 'Jadwal puasa',
+  widgetNav: 'Widget situs',
+  widgetEyebrow: 'Widget gratis',
+  widgetTitle: 'Pasang kalender puasa sunnah di situs Anda',
+  widgetLead: 'Tampilkan Ayyamul Bidh, Senin dan Kamis, Ramadhan, Arafah, dan Asyura di situs masjid, sekolah, atau komunitas Anda, dalam 10 bahasa. Gratis, tanpa cookie dan tanpa pelacakan.',
+  widgetCta: 'Dapatkan kode',
 };
 
 export default id;
