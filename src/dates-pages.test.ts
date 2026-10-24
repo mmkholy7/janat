@@ -11,7 +11,7 @@ const find = (slug: string) => site.subjects.find(subject => subjectSlug(subject
 describe('fasting-date pages', () => {
   it('builds a hub, year, month and occasion page for the coming months', () => {
     expect(site.subjects.map(subjectSlug)).toEqual([
-      '', '2026', '2027',
+      '', 'widget', '2026', '2027',
       '2026-10', '2026-11', '2026-12', ...Array.from({ length: 12 }, (_, index) => `2027-${String(index + 1).padStart(2, '0')}`),
       'ramadan-2027', 'shawwal-2027', 'arafah-2027', 'ashura-2027',
     ]);
@@ -54,6 +54,22 @@ describe('fasting-date pages', () => {
     expect(ramadan).toContain('Sahih al-Bukhari 38');
   });
 
+  it('offers a website widget with live preview and code in each language', () => {
+    const html = renderDatePage(template, 'ur', find('widget'), site, assets);
+    expect(html).toContain('<link rel="canonical" href="https://janat.uably.com/ur/fasting/widget/"');
+    expect(html).toContain('href="#builder"');
+    expect(html).toContain('data-widget-builder data-lang="ur"');
+    expect(html).toContain('<option value="ur" lang="ur" selected>');
+    expect(html).toContain('<iframe src="/embed/?lang=ur"');
+    expect(html).toContain('&lt;iframe src=&quot;https://janat.uably.com/embed/?lang=ur&quot;');
+    expect(html).toContain('href=&quot;https://janat.uably.com/ur/fasting/&quot;');
+    expect(html).toContain('data-target="#widget-code"');
+    expect(html.match(/type="radio"/g)).toHaveLength(8);
+    const hub = renderDatePage(template, 'en', find(''), site, assets);
+    expect(hub).toContain('class="widget-promo" href="/fasting/widget/"');
+    expect(renderDatePage(template, 'en', find('2026-11'), site, assets)).toContain('href="/fasting/widget/"');
+  });
+
   it('lists the date pages in the sitemap', () => {
     const xml = sitemap(new Date('2026-10-23'), site.subjects.map(subjectUrl));
     expect(xml.match(/<loc>/g)).toHaveLength((site.subjects.length + 1) * languages.length);
@@ -65,6 +81,7 @@ describe('fasting-date pages', () => {
     expect(subjectForPath(site, '/fasting/')).toMatchObject({ lang: 'en', subject: { kind: 'hub' } });
     expect(subjectForPath(site, '/ur/fasting/ramadan-2027/')).toMatchObject({ lang: 'ur', subject: { kind: 'occasion' } });
     expect(subjectForPath(site, '/fasting/2027/')).toMatchObject({ subject: { kind: 'year', year: 2027 } });
+    expect(subjectForPath(site, '/bn/fasting/widget/')).toMatchObject({ lang: 'bn', subject: { kind: 'widget' } });
     for (const path of ['/en/fasting/', '/fasting/2030-01/', '/xx/fasting/', '/fasting', '/ur/']) expect(subjectForPath(site, path), path).toBeUndefined();
   });
 });

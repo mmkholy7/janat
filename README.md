@@ -29,6 +29,7 @@ Open the URL printed by Vite (normally http://localhost:5173). In GitHub Codespa
 - A separate 30-day daily Quran calendar download with 8-hour-ahead alerts and distinct event identifiers.
 - Google Calendar, Outlook.com, and Microsoft 365 event drafts without downloading or uploading files.
 - Read-only rolling subscriptions for Google, Outlook, Microsoft 365, and Apple Calendar, backed by a public Cloudflare Worker endpoint. No account access or personal activity history is shared.
+- An embeddable Sunnah fasting calendar for other websites (`/embed/`, month or upcoming-fasts view, light/dark/auto, all ten languages) and a builder with live preview and copyable code at `/fasting/widget/`. The widget sets no cookies; each fast opens Janat's add-to-calendar sheet.
 
 ## Languages and search
 
@@ -36,7 +37,7 @@ Each language has its own address: `/` for English and `/ar/`, `/ur/`, `/id/`, `
 
 `npm run build` pre-renders a static page per language (`dist/<lang>/index.html`) with a translated title and description, canonical URL, reciprocal `hreflang` alternates, Open Graph and Twitter cards, JSON-LD (`WebSite`, `WebApplication`, `FAQPage`), and readable content for crawlers and visitors without JavaScript. It also writes `dist/sitemap.xml`, which `public/robots.txt` references. The canonical domain is `SITE_URL` in `src/seo.ts`; change it when deploying elsewhere. After each domain change, submit the sitemap in Google Search Console and Bing Webmaster Tools.
 
-`public/_headers` sets security headers and long-lived caching for hashed assets on Cloudflare.
+`public/_headers` sets security headers and long-lived caching for hashed assets on Cloudflare. Pages may only be framed by Janat itself, except `/embed/`, which any site may frame. The embed is `noindex`; the builder page and its visible credit link are what search engines see.
 
 Translations other than English were drafted with machine assistance. Have native speakers, ideally familiar with Islamic terminology, review them before promoting a language.
 
