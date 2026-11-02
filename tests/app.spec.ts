@@ -191,6 +191,26 @@ test('calendar providers open drafts and subscribe without file imports', async 
   await page.screenshot({ path: testInfo.outputPath('calendar-providers.png'), fullPage: true });
 });
 
+test('calendar shows local Sohour cutoff and fasting duration on fast days', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('janat.ramadan', JSON.stringify({ city: 'cairo', method: 'Egyptian' })));
+  await page.reload();
+  await page.locator('nav [data-view="calendar"]').click();
+  const fastCell = page.locator('.calendar-cell[data-date="2026-10-19"]');
+  await expect(page.locator('.calendar-times-summary')).toContainText('Cairo');
+  await expect(page.locator('.calendar-azan-link')).toHaveAttribute('href', 'https://azan.uably.com/');
+  await expect(page.locator('.calendar-azan-link')).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(fastCell.locator('.cell-fast-times')).toBeVisible({ timeout: 10000 });
+  await expect(fastCell).toHaveAttribute('aria-label', /Suhoor ends/);
+  await fastCell.click();
+  await expect(page.locator('.fast-day-details')).toContainText('Suhoor ends');
+  await expect(page.locator('.fast-day-details')).toContainText('Fasting duration');
+  await page.keyboard.press('Escape');
+  for (const language of [...languages.slice(1), 'en']) {
+    await chooseLanguage(page, language);
+    expect(await fitsViewport(page), language).toBe(true);
+  }
+});
+
 test('every add-to-calendar offers a subscription that keeps future fasts coming', async ({ page }) => {
   await page.locator('.day-card').nth(1).locator('[data-action="invite"]').click();
   const card = page.locator('dialog .subscription-options');
