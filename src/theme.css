@@ -190,6 +190,12 @@ html:is([dir=rtl], [lang=bn]) .hero h1 span { font-style: normal; }
 .next-fast > p > span { margin-inline: 6px; color: var(--gold-bright); }
 .hero-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
 .hero-badges .badge { background: #ffffff14; color: var(--night-ink); border: 1px solid var(--night-line); }
+.next-fast-times { display: grid; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--night-line); }
+.next-fast-times .fast-time { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 600; color: var(--night-muted); }
+.next-fast-times .fast-time svg { flex-shrink: 0; width: 16px; height: 16px; stroke-width: 1.75; color: var(--gold-bright); }
+.next-fast-times .fast-time strong { margin-inline-start: auto; font-size: 14.5px; font-weight: 600; color: var(--night-ink); font-variant-numeric: tabular-nums; }
+.next-fast-place { justify-self: start; margin-top: 2px; font-size: 11.5px; color: var(--night-muted); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: #ffffff3d; }
+.next-fast-place:hover { color: var(--night-ink); }
 .next-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--night-line); }
 .hero-link { display: inline-flex; align-items: center; gap: 10px; font-size: 14.5px; font-weight: 600; color: var(--gold-bright); transition: gap .2s; }
 .hero-link:hover { gap: 13px; }
@@ -386,6 +392,9 @@ html[dir=rtl] .place-controls select { background-position: left 14px center; }
 .time-tile.iftar span, .time-tile.iftar small { color: var(--night-muted); }
 .time-tile strong { font-family: var(--display); font-size: 28px; font-weight: 600; line-height: 1.25; }
 .time-tile small { font-size: 12.5px; color: var(--muted); }
+.fast-duration-note { display: flex; align-items: center; gap: 9px; margin-top: 12px; padding: 12px 18px; border-radius: var(--radius); background: var(--pattern), var(--raised); font-size: 13px; font-weight: 600; color: var(--muted); }
+.fast-duration-note svg { flex-shrink: 0; width: 17px; height: 17px; stroke-width: 1.75; color: var(--gold); }
+.fast-duration-note strong { margin-inline-start: auto; font-family: var(--display); font-size: 19px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
 .ramadan-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
 .ramadan-actions .primary { flex: 1 1 auto; }
 
@@ -594,6 +603,13 @@ html:is([dir=rtl], [lang=bn]) .weekday { letter-spacing: 0; text-transform: none
 .fast-day-details > span { color: var(--muted); }
 .fast-day-details > strong { text-align: end; font-variant-numeric: tabular-nums; }
 .fast-day-details > small { grid-column: 1 / -1; color: var(--muted); }
+.fasting-month-list { margin-top: 20px; border-top: 1px solid var(--line); }
+.fasting-month-day { padding: 18px 0; border-bottom: 1px solid var(--line); }
+.fasting-month-day-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 20px; }
+.fasting-month-day-header > div { min-width: 0; }
+.fasting-month-day-header h2 { font-size: 17px; }
+.fasting-month-day-header p { margin-top: 4px; font-size: 13px; color: var(--muted); }
+.fasting-month-day .fast-day-details { margin-block: 12px 0; }
 .calendar-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; margin-top: 20px; font-size: 13.5px; color: var(--muted); }
 .calendar-legend > span { display: flex; align-items: center; gap: 7px; }
 .calendar-legend svg { width: 14px; height: 14px; color: var(--ink); }

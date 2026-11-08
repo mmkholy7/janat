@@ -19,6 +19,18 @@ export function hijriDate(date: Date, adjustment = 0): HijriDate {
   return { year: value('year'), month: value('month'), day: value('day') };
 }
 
+export function hijriMonthRange(date: Date, adjustment = 0) {
+  const current = hijriDate(date, adjustment);
+  const matches = (candidate: Date) => {
+    const hijri = hijriDate(candidate, adjustment);
+    return hijri.year === current.year && hijri.month === current.month;
+  };
+  let start = addDays(date, 0), end = start;
+  while (matches(addDays(start, -1))) start = addDays(start, -1);
+  while (matches(addDays(end, 1))) end = addDays(end, 1);
+  return { start, end, year: current.year, month: current.month };
+}
+
 export function fastDay(date: Date, adjustment = 0): FastDay | null {
   const hijri = hijriDate(date, adjustment);
   if ((hijri.month === 10 && hijri.day === 1) || (hijri.month === 12 && hijri.day >= 10 && hijri.day <= 13)) return null;
