@@ -194,6 +194,12 @@ test('calendar providers open drafts and subscribe without file imports', async 
 test('calendar shows local Sohour cutoff and fasting duration on fast days', async ({ page }) => {
   await page.evaluate(() => localStorage.setItem('janat.ramadan', JSON.stringify({ city: 'cairo', method: 'Egyptian' })));
   await page.reload();
+  const heroTimes = page.locator('.next-fast-times');
+  await expect(heroTimes).toBeVisible({ timeout: 10000 });
+  await expect(heroTimes).toContainText('Suhoor ends');
+  await expect(heroTimes).toContainText('Iftar');
+  await expect(heroTimes).toContainText('Fasting duration');
+  await expect(heroTimes.locator('.next-fast-place')).toContainText('Cairo');
   await page.locator('nav [data-view="calendar"]').click();
   const fastCell = page.locator('.calendar-cell[data-date="2026-10-19"]');
   await expect(page.locator('.calendar-times-summary')).toContainText('Cairo');
@@ -408,6 +414,15 @@ test('other websites can embed the fasting calendar and copy its code', async ({
 });
 
 test.describe('Fasting month', () => {
+  test('shows the Ramadan companion only within 45 days of Ramadan', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-11-08T12:00:00'));
+    await page.reload();
+    await expect(page.locator('.ramadan-band')).toHaveCount(0);
+    await page.clock.setFixedTime(new Date('2026-12-27T12:00:00'));
+    await page.reload();
+    await expect(page.locator('.ramadan-band')).toBeVisible();
+  });
+
   test('shows recommended fast days remaining in the current Hijri month', async ({ page }) => {
     await page.clock.install({ time: new Date('2026-10-19T12:00:00') });
     await page.goto('/#fasting');
