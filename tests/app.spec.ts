@@ -407,16 +407,47 @@ test('other websites can embed the fasting calendar and copy its code', async ({
   expect(errors).toEqual([]);
 });
 
+test.describe('Fasting month', () => {
+  test('shows recommended fast days remaining in the current Hijri month', async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-10-19T12:00:00') });
+    await page.goto('/#fasting');
+    await expect(page.locator('nav [data-view="fasting"]')).toHaveClass(/active/);
+    await expect(page.locator('h1')).toHaveText('Fasting');
+    const days = page.locator('.fasting-month-day');
+    await expect(days.first()).toHaveAttribute('data-date', '2026-10-19');
+    await expect(days.first()).toContainText('Monday & Thursday');
+    await expect(days.first().locator('.fast-day-details')).toContainText('Fasting duration');
+    const dates = await days.evaluateAll(elements => elements.map(element => element.getAttribute('data-date')!));
+    expect(dates.every(date => date >= '2026-10-19')).toBe(true);
+  });
+
+  test('shows only the remaining Ramadan days and keeps the companion reachable', async ({ page }) => {
+    await page.clock.install({ time: new Date('2027-02-10T12:00:00') });
+    await page.goto('/#fasting');
+    const days = page.locator('.fasting-month-day');
+    await expect(days.first()).toHaveAttribute('data-date', '2027-02-10');
+    await expect(days.first()).toContainText('Ramadan, day');
+    await expect(page.locator('.ramadan-band')).toBeVisible();
+    const dates = await days.evaluateAll(elements => elements.map(element => element.getAttribute('data-date')!));
+    expect(dates.length).toBeLessThan(30);
+    expect(dates.every(date => date >= '2027-02-10')).toBe(true);
+    await page.locator('.ramadan-band button').click();
+    await expect(page).toHaveURL(/#ramadan$/);
+    await expect(page.locator('h1')).toHaveText('Ramadan 1448');
+    await expect(page.locator('nav [data-view="fasting"]')).toHaveClass(/active/);
+  });
+});
+
 test.describe('Ramadan companion', () => {
   test.use({ geolocation: { latitude: 51.5203, longitude: -0.0753 }, permissions: ['geolocation'] });
 
   test('subscribes to suhoor and iftar times for a city or the visitor’s location', async ({ page, request }, testInfo) => {
     await expect(page.locator('nav .nav-link')).toHaveCount(6);
-    await expect(page.locator('nav [data-view="ramadan"]')).toHaveText('Fasting');
+    await expect(page.locator('nav [data-view="fasting"]')).toHaveText('Fasting');
     await page.locator('.ramadan-band button', { hasText: 'Open the Ramadan companion' }).click();
     await expect(page).toHaveURL(/#ramadan$/);
     await expect(page.locator('h1')).toHaveText('Ramadan 1448');
-    await expect(page.locator('nav [data-view="ramadan"]')).toHaveClass(/active/);
+    await expect(page.locator('nav [data-view="fasting"]')).toHaveClass(/active/);
     await page.locator('#ramadan-city').selectOption('london');
     await page.locator('#ramadan-method').selectOption('MoonsightingCommittee');
     await expect(page.locator('.fast-times-day')).toContainText('Monday 8 February');

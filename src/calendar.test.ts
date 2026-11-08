@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, calendarEventLinks, calendarInvite, calendarSubscriptionLinks, dateKey, fastDay, fastDaysBetween, hijriDate, upcomingDays } from './calendar';
+import { addDays, calendarEventLinks, calendarInvite, calendarSubscriptionLinks, dateKey, fastDay, fastDaysBetween, hijriDate, hijriMonthRange, upcomingDays } from './calendar';
 import { onRequest } from '../functions/api/calendar';
 import { languages } from './languages';
 import { messages } from './locales';
@@ -57,6 +57,13 @@ describe('fasting calendar', () => {
   });
   it('uses the supported Umm al-Qura calendar for 1448', () => {
     expect(hijriDate(new Date(2026, 9, 19, 12)).year).toBe(1448);
+  });
+  it('finds the complete Hijri month across Gregorian month boundaries', () => {
+    const date = new Date(2026, 9, 19, 12), range = hijriMonthRange(date);
+    expect(hijriDate(range.start)).toMatchObject({ year: range.year, month: range.month, day: 1 });
+    expect(hijriDate(range.end)).toMatchObject({ year: range.year, month: range.month });
+    expect(hijriDate(addDays(range.start, -1))).not.toMatchObject({ year: range.year, month: range.month });
+    expect(hijriDate(addDays(range.end, 1))).not.toMatchObject({ year: range.year, month: range.month });
   });
   it('includes Mondays and Thursdays, but not an ordinary Tuesday', () => {
     expect(fastDay(new Date(2026, 9, 19, 12))?.reasons).toContain('weekly');

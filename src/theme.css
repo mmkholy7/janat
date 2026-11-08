@@ -594,6 +594,13 @@ html:is([dir=rtl], [lang=bn]) .weekday { letter-spacing: 0; text-transform: none
 .fast-day-details > span { color: var(--muted); }
 .fast-day-details > strong { text-align: end; font-variant-numeric: tabular-nums; }
 .fast-day-details > small { grid-column: 1 / -1; color: var(--muted); }
+.fasting-month-list { margin-top: 20px; border-top: 1px solid var(--line); }
+.fasting-month-day { padding: 18px 0; border-bottom: 1px solid var(--line); }
+.fasting-month-day-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 20px; }
+.fasting-month-day-header > div { min-width: 0; }
+.fasting-month-day-header h2 { font-size: 17px; }
+.fasting-month-day-header p { margin-top: 4px; font-size: 13px; color: var(--muted); }
+.fasting-month-day .fast-day-details { margin-block: 12px 0; }
 .calendar-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; margin-top: 20px; font-size: 13.5px; color: var(--muted); }
 .calendar-legend > span { display: flex; align-items: center; gap: 7px; }
 .calendar-legend svg { width: 14px; height: 14px; color: var(--ink); }
