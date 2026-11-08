@@ -230,6 +230,7 @@ const tr: Messages = {
   widgetTitle: 'Sitenize sünnet oruç takvimi ekleyin',
   widgetLead: 'Eyyam-ı biyz’ı, pazartesi ve perşembeyi, Ramazan’ı, Arefe’yi ve Âşûrâ’yı cami, okul veya topluluk sitenizde 10 dilde gösterin. Ücretsiz, çerezsiz ve takipsiz.',
   widgetCta: 'Kodu al',
+  fastingNav: 'Oruç',
   ramadan: 'Ramazan',
   ramadanEyebrow: 'Ramazan rehberi',
   ramadanMubarak: 'Hayırlı Ramazanlar',

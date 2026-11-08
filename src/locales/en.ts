@@ -228,6 +228,7 @@ const en = {
   widgetTitle: 'Add a Sunnah fasting calendar to your website',
   widgetLead: 'Show the White Days, Mondays and Thursdays, Ramadan, Arafah and Ashura on your mosque, school or community website, in 10 languages. Free, with no cookies and no tracking.',
   widgetCta: 'Get the code',
+  fastingNav: 'Fasting',
   ramadan: 'Ramadan',
   ramadanEyebrow: 'Ramadan companion',
   ramadanMubarak: 'Ramadan Mubarak',

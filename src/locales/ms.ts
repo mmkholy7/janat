@@ -230,6 +230,7 @@ const ms: Messages = {
   widgetTitle: 'Pasang kalendar puasa sunat di laman web anda',
   widgetLead: 'Paparkan hari putih, Isnin dan Khamis, Ramadan, Arafah dan Asyura di laman web masjid, sekolah atau komuniti anda, dalam 10 bahasa. Percuma, tanpa kuki dan tanpa penjejakan.',
   widgetCta: 'Dapatkan kod',
+  fastingNav: 'Puasa',
   ramadan: 'Ramadan',
   ramadanEyebrow: 'Teman Ramadan',
   ramadanMubarak: 'Ramadan Mubarak',
