@@ -459,6 +459,8 @@ test.describe('Ramadan companion', () => {
   test('subscribes to suhoor and iftar times for a city or the visitor’s location', async ({ page, request }, testInfo) => {
     await expect(page.locator('nav .nav-link')).toHaveCount(6);
     await expect(page.locator('nav [data-view="fasting"]')).toHaveText('Fasting');
+    await page.clock.setFixedTime(new Date('2027-01-10T12:00:00'));
+    await page.reload();
     await page.locator('.ramadan-band button', { hasText: 'Open the Ramadan companion' }).click();
     await expect(page).toHaveURL(/#ramadan$/);
     await expect(page.locator('h1')).toHaveText('Ramadan 1448');
