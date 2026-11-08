@@ -230,6 +230,7 @@ const es: Messages = {
   widgetTitle: 'Añade un calendario de ayunos sunnah a tu web',
   widgetLead: 'Muestra los días blancos, los lunes y jueves, Ramadán, Arafa y Ashura en la web de tu mezquita, escuela o comunidad, en 10 idiomas. Gratis, sin cookies y sin rastreo.',
   widgetCta: 'Obtener el código',
+  fastingNav: 'Ayuno',
   ramadan: 'Ramadán',
   ramadanEyebrow: 'Compañero de Ramadán',
   ramadanMubarak: 'Ramadán Mubarak',

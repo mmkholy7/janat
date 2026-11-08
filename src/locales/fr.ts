@@ -230,6 +230,7 @@ const fr: Messages = {
   widgetTitle: 'Ajoutez un calendrier des jeûnes sunna à votre site',
   widgetLead: 'Affichez les jours blancs, les lundis et jeudis, le Ramadan, Arafa et Achoura sur le site de votre mosquée, école ou association, en 10 langues. Gratuit, sans cookies ni pistage.',
   widgetCta: 'Obtenir le code',
+  fastingNav: 'Jeûne',
   ramadan: 'Ramadan',
   ramadanEyebrow: 'Compagnon du Ramadan',
   ramadanMubarak: 'Ramadan Moubarak',

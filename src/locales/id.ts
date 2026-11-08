@@ -230,6 +230,7 @@ const id: Messages = {
   widgetTitle: 'Pasang kalender puasa sunnah di situs Anda',
   widgetLead: 'Tampilkan Ayyamul Bidh, Senin dan Kamis, Ramadhan, Arafah, dan Asyura di situs masjid, sekolah, atau komunitas Anda, dalam 10 bahasa. Gratis, tanpa cookie dan tanpa pelacakan.',
   widgetCta: 'Dapatkan kode',
+  fastingNav: 'Puasa',
   ramadan: 'Ramadan',
   ramadanEyebrow: 'Pendamping Ramadan',
   ramadanMubarak: 'Ramadan Mubarak',
